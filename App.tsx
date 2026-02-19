@@ -1,25 +1,34 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useStore } from './store';
 import PublicView from './components/PublicView';
 import AdminView from './components/AdminView';
-import { Package, LayoutDashboard, Search, LogIn, LogOut } from 'lucide-react';
+import { Package, LogIn, LogOut, AlertCircle } from 'lucide-react';
 
 const App: React.FC = () => {
   const [view, setView] = useState<'public' | 'admin'>('public');
-  const { auth, login, logout } = useStore();
+  const { auth, users, login, logout } = useStore();
   const [showLogin, setShowLogin] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === 'admin' && password === 'admin') {
-      login(username);
+    setError('');
+
+    // Dynamic lookup in the users array
+    const foundUser = users.find(u => u.username === username && u.password === password);
+
+    if (foundUser) {
+      const { password: _, ...userWithoutPassword } = foundUser;
+      login(userWithoutPassword as any);
       setShowLogin(false);
       setView('admin');
+      setUsername('');
+      setPassword('');
     } else {
-      alert('Invalid Credentials! Try admin/admin');
+      setError('Username atau password salah!');
     }
   };
 
@@ -41,7 +50,7 @@ const App: React.FC = () => {
                 onClick={() => setView('public')}
                 className={`px-3 py-2 rounded-md text-sm font-medium transition ${view === 'public' ? 'bg-indigo-800' : 'hover:bg-indigo-600'}`}
               >
-                Search Inventory
+                Cari Inventaris
               </button>
               
               {auth.user ? (
@@ -53,7 +62,7 @@ const App: React.FC = () => {
                     Dashboard
                   </button>
                   <button 
-                    onClick={() => logout()}
+                    onClick={() => { logout(); setView('public'); }}
                     className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium bg-red-500 hover:bg-red-600 transition"
                   >
                     <LogOut size={16} />
@@ -88,49 +97,60 @@ const App: React.FC = () => {
 
       {/* Login Modal */}
       {showLogin && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-8">
-            <h2 className="text-2xl font-bold text-slate-800 mb-6">Admin Login</h2>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 animate-in zoom-in-95 duration-200">
+            <h2 className="text-2xl font-bold text-slate-800 mb-2">Admin Login</h2>
+            <p className="text-slate-500 mb-6 text-sm">Masuk untuk mengelola stok gudang</p>
+            
+            {error && (
+              <div className="mb-6 p-3 bg-rose-50 text-rose-600 rounded-lg flex items-center text-sm font-medium border border-rose-100">
+                <AlertCircle size={18} className="mr-2" />
+                {error}
+              </div>
+            )}
+
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Username</label>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Username</label>
                 <input 
                   type="text" 
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50"
                   placeholder="admin"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Password</label>
                 <input 
                   type="password" 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-                  placeholder="admin"
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50"
+                  placeholder="••••••••"
                   required
                 />
               </div>
-              <div className="flex space-x-3 pt-2">
+              <div className="flex space-x-3 pt-4">
                 <button 
                   type="submit" 
-                  className="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition"
+                  className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-100"
                 >
                   Sign In
                 </button>
                 <button 
                   type="button" 
-                  onClick={() => setShowLogin(false)}
-                  className="flex-1 bg-slate-100 text-slate-600 py-2 rounded-lg font-medium hover:bg-slate-200 transition"
+                  onClick={() => { setShowLogin(false); setError(''); }}
+                  className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold hover:bg-slate-200 transition"
                 >
                   Cancel
                 </button>
               </div>
             </form>
-            <p className="mt-4 text-xs text-slate-500 text-center">Demo: use admin / admin</p>
+            <div className="mt-6 pt-6 border-t text-center">
+               <p className="text-xs text-slate-400">Default: admin / admin</p>
+            </div>
           </div>
         </div>
       )}

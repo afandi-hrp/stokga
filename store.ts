@@ -6,13 +6,13 @@ import { Item, Location, User, AuthState } from './types';
 interface WarehouseStore {
   items: Item[];
   locations: Location[];
-  users: (User & { password?: string })[]; // Storing passwords for mock purposes
+  users: (User & { password?: string })[];
   auth: AuthState;
   
   // Auth Actions
-  login: (username: string) => void;
+  login: (user: User) => void;
   logout: () => void;
-  changePassword: (newPassword: string) => void;
+  changePassword: (username: string, newPassword: string) => void;
 
   // User Actions
   addUser: (user: Omit<User, 'id'> & { password?: string }) => void;
@@ -50,15 +50,14 @@ export const useStore = create<WarehouseStore>()(
       users: initialUsers,
       auth: { user: null, token: null },
 
-      login: (username) => {
-        const user = initialUsers.find(u => u.username === username);
-        set({ auth: { user: { id: user?.id || '1', username, role: 'admin' }, token: 'mock-jwt-token' } });
-      },
+      login: (user) => set({ 
+        auth: { user, token: 'mock-jwt-token' } 
+      }),
       
       logout: () => set({ auth: { user: null, token: null } }),
 
-      changePassword: (newPassword) => set((state) => ({
-        users: state.users.map(u => u.username === state.auth.user?.username ? { ...u, password: newPassword } : u)
+      changePassword: (username, newPassword) => set((state) => ({
+        users: state.users.map(u => u.username === username ? { ...u, password: newPassword } : u)
       })),
 
       addUser: (user) => set((state) => ({
@@ -94,6 +93,13 @@ export const useStore = create<WarehouseStore>()(
         items: state.items.filter(i => i.id !== id)
       })),
     }),
-    { name: 'warehouse-storage' }
+    { 
+      name: 'warehouse-storage',
+      // Ensure we don't accidentally wipe the users array on re-hydration if it's already there
+      merge: (persistedState: any, currentState) => ({
+        ...currentState,
+        ...persistedState,
+      }),
+    }
   )
 );

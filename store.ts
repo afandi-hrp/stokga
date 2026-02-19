@@ -4,21 +4,16 @@ import { createClient } from '@supabase/supabase-js';
 import { Item, Location, User, AuthState } from './types';
 
 const SUPABASE_URL = 'https://supabase.waruna-group.co.id';
+// Menggunakan Key yang Anda berikan
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlbGYtaG9zdGVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDgzNDU2MDAsImV4cCI6MjAyMzkxMDQwMH0.XvR6vS_tXwN6pY8vR2pX9zW4mN7qQ5bL1tS6vH3aK9I';
 
-// Initialization optimized for self-hosted Supabase with explicit role headers
+// PERBAIKAN: Menghapus 'global.headers' manual karena menyebabkan header ganda (Bearer token, Bearer token)
+// yang memicu error "Wrong key type" di server PostgREST.
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: false,
     autoRefreshToken: false,
     detectSessionInUrl: false
-  },
-  global: {
-    headers: {
-      'apikey': SUPABASE_ANON_KEY,
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-      'X-Client-Info': 'smart-warehouse-pro'
-    }
   }
 });
 
@@ -150,19 +145,31 @@ export const useStore = create<WarehouseStore>((set, get) => ({
   },
 
   addUser: async (userData) => {
-    // Memaksa PostgREST menggunakan role anon secara eksplisit lewat header jika diperlukan
-    const { error } = await supabase
-      .from('users')
-      .insert([userData]);
-      
+    // Strategi 1: Coba Insert Normal (Standard)
+    const { error } = await supabase.from('users').insert([userData]);
+    
     if (error) {
-      console.error("Detailed Add User Error:", error);
-      if (error.message.includes('suitable key')) {
-        alert("ERROR DATABASE: Izin Role 'anon' ditolak oleh server. Jalankan skrip SQL di backend_implementation.md");
+      console.error("Standard Insert Failed:", error);
+      
+      // Strategi 2: Coba lewat RPC Function (Jalur Khusus/Bypass)
+      // Ini membutuhkan script SQL 'create_user_safe' di backend_implementation.md
+      console.log("Mencoba metode RPC fallback...");
+      
+      const { error: rpcError } = await supabase.rpc('create_user_safe', {
+        p_username: userData.username,
+        p_password: userData.password,
+        p_role: userData.role
+      });
+
+      if (rpcError) {
+        console.error("RPC Failed:", rpcError);
+        alert(`Gagal tambah user. \nError 1: ${error.message}\nError 2 (RPC): ${rpcError.message}\n\nSolusi: Pastikan Anda sudah menjalankan SQL 'create_user_safe' di Backend.`);
       } else {
-        alert("Gagal tambah user: " + error.message);
+        await get().fetchData(); // Berhasil lewat RPC
       }
-    } else await get().fetchData();
+    } else {
+      await get().fetchData(); // Berhasil lewat Insert biasa
+    }
   },
 
   deleteUser: async (id) => {

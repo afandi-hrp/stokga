@@ -6,6 +6,7 @@ import { Item, Location, User, AuthState } from './types';
 interface Branding {
   title: string;
   primaryColor: string;
+  logo?: string;
 }
 
 interface WarehouseStore {
@@ -54,7 +55,8 @@ const initialUsers = [
 
 const defaultBranding: Branding = {
   title: 'SmartWarehouse Pro',
-  primaryColor: '#4f46e5' // indigo-600
+  primaryColor: '#4f46e5', // indigo-600
+  logo: ''
 };
 
 export const useStore = create<WarehouseStore>()(

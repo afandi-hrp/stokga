@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../store';
 // Add Package to the imports from lucide-react
-import { Lock, Save, Key, AlertCircle, CheckCircle2, Palette, Type, Package } from 'lucide-react';
+import { Lock, Save, Key, AlertCircle, CheckCircle2, Palette, Type, Package, Image as ImageIcon } from 'lucide-react';
 
 const Settings: React.FC = () => {
   const { auth, users, changePassword, branding, updateBranding } = useStore();
@@ -14,7 +14,8 @@ const Settings: React.FC = () => {
   
   const [brandingForm, setBrandingForm] = useState({
     title: branding.title,
-    primaryColor: branding.primaryColor
+    primaryColor: branding.primaryColor,
+    logo: branding.logo || ''
   });
 
   const [message, setMessage] = useState<{ type: 'error' | 'success', text: string } | null>(null);
@@ -79,7 +80,7 @@ const Settings: React.FC = () => {
             </div>
             <div>
               <h3 className="text-xl font-bold text-slate-800">Custom Tampilan</h3>
-              <p className="text-sm text-slate-500">Ubah identitas dan tema warna aplikasi</p>
+              <p className="text-sm text-slate-500">Ubah identitas, logo, dan tema warna aplikasi</p>
             </div>
           </div>
 
@@ -102,6 +103,27 @@ const Settings: React.FC = () => {
                 className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                 placeholder="SmartWarehouse Pro"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center">
+                <ImageIcon size={14} className="mr-1.5" /> URL Logo Aplikasi
+              </label>
+              <div className="flex space-x-3">
+                <input 
+                  type="url"
+                  value={brandingForm.logo}
+                  onChange={e => setBrandingForm({...brandingForm, logo: e.target.value})}
+                  className="flex-grow px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm"
+                  placeholder="https://example.com/logo.png"
+                />
+                {brandingForm.logo && (
+                  <div className="w-12 h-10 bg-slate-100 rounded-xl overflow-hidden border border-slate-200 p-1 flex items-center justify-center">
+                    <img src={brandingForm.logo} alt="Logo Preview" className="max-w-full max-h-full object-contain" />
+                  </div>
+                )}
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1 italic">Kosongkan jika ingin menggunakan ikon default.</p>
             </div>
             
             <div>
@@ -214,7 +236,11 @@ const Settings: React.FC = () => {
                   className="w-full aspect-video rounded-xl flex flex-col items-center justify-center p-6 text-center transition-all duration-500"
                   style={{ backgroundColor: brandingForm.primaryColor }}
                 >
-                  <Package size={32} className="mb-2" />
+                  {brandingForm.logo ? (
+                    <img src={brandingForm.logo} alt="Logo" className="max-w-[40px] max-h-[40px] mb-2 object-contain" />
+                  ) : (
+                    <Package size={32} className="mb-2" />
+                  )}
                   <h4 className="font-bold text-lg">{brandingForm.title}</h4>
                   <p className="text-[10px] opacity-70">Sistem Manajemen Gudang Profesional</p>
                 </div>

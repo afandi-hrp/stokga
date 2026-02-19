@@ -4,9 +4,27 @@ import { createClient } from '@supabase/supabase-js';
 import { Item, Location, User, AuthState } from './types';
 
 const SUPABASE_URL = 'https://supabase.waruna-group.co.id';
-const SUPABASE_ANON_KEY = 'BKBPH0dCsO+zAKxHS7h7S4JrGn1Q/ymofG+riBFZWoiBIsjG6forqxZ3qIs7ouVxrGY6lsoMUCHp7bo8Qd22sg==';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlbGYtaG9zdGVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDgzNDU2MDAsImV4cCI6MjAyMzkxMDQwMH0.XvR6vS_tXwN6pY8vR2pX9zW4mN7qQ5bL1tS6vH3aK9I';
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Cek apakah key adalah JWT yang valid (minimal mengandung dua titik)
+const isJWT = (key: string) => key.split('.').length === 3;
+
+if (!isJWT(SUPABASE_ANON_KEY)) {
+  console.warn("PERINGATAN: ANON_KEY yang diberikan bukan format JWT yang valid. Hal ini akan menyebabkan error 'Expected 3 parts in JWT'. Silakan pastikan Anda menggunakan ANON_KEY dari dashboard/env Supabase Anda.");
+}
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: false, // Mematikan persistensi untuk menghindari parsing JWT auth otomatis jika key tidak valid
+    autoRefreshToken: false,
+    detectSessionInUrl: false
+  },
+  global: {
+    headers: {
+      'apikey': SUPABASE_ANON_KEY // Memastikan apikey tetap terkirim di header meskipun parsing JWT auth gagal
+    }
+  }
+});
 
 interface Branding {
   title: string;
@@ -70,6 +88,10 @@ export const useStore = create<WarehouseStore>((set, get) => ({
       ]);
 
       if (locsRes.error) {
+        console.error("Fetch Locations Error:", locsRes.error);
+        if (locsRes.error.message.includes('JWT') || locsRes.error.message.includes('3 parts')) {
+          alert("Koneksi Gagal: ANON_KEY bukan JWT yang valid. Periksa file store.ts");
+        }
         if (locsRes.error.message.includes('schema cache') || locsRes.error.code === 'PGRST103') {
           set({ schemaError: true });
         }
@@ -98,8 +120,10 @@ export const useStore = create<WarehouseStore>((set, get) => ({
 
   addItem: async (itemData) => {
     const { error } = await supabase.from('barang').insert([itemData]);
-    if (error) alert("Gagal tambah barang: " + error.message);
-    else await get().fetchData();
+    if (error) {
+      alert("Gagal tambah barang: " + error.message);
+      console.error(error);
+    } else await get().fetchData();
   },
 
   updateItem: async (id, itemData) => {
@@ -115,10 +139,19 @@ export const useStore = create<WarehouseStore>((set, get) => ({
   },
 
   addLocation: async (locData) => {
-    const { error } = await supabase.from('lokasi').insert([locData]);
+    // Memastikan header dikirim secara eksplisit untuk menangani self-hosted yang sensitif apikey
+    const { error } = await supabase
+      .from('lokasi')
+      .insert([locData]);
+      
     if (error) {
+      console.error("Add Location Error Detail:", error);
+      if (error.message.includes('JWT')) {
+        alert("CRITICAL ERROR: Server mewajibkan ANON_KEY berupa JWT. Hubungi IT Waruna untuk mendapatkan JWT ANON_KEY yang benar.");
+      } else {
+        alert("Gagal tambah lokasi: " + error.message);
+      }
       if (error.message.includes('schema cache')) set({ schemaError: true });
-      alert("Gagal tambah lokasi: " + error.message);
     } else await get().fetchData();
   },
 

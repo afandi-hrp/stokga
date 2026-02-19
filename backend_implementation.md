@@ -1,21 +1,36 @@
 
-# ☢️ NUCLEAR FIX: Solusi Total Error "Schema Cache"
+# 🚀 Panduan Khusus Supabase Self-Hosted (Waruna Group)
 
-Jika error **"Could not find the table"** masih muncul setelah menjalankan perintah `NOTIFY`, gunakan skrip di bawah ini. Skrip ini akan menghapus tabel lama (jika ada) dan membangun ulang struktur yang 100% kompatibel dengan aplikasi SmartWarehouse.
+Jika Anda mendapatkan error **"Expected 3 parts in JWT; got 1"**, itu berarti key yang Anda gunakan di `store.ts` bukan merupakan token JWT yang valid. Supabase Client mewajibkan key tersebut memiliki 3 bagian (dot-separated).
 
-### Langkah-Langkah:
-1. Buka **SQL Editor** di Dashboard Supabase.
-2. **PENTING:** Hapus semua teks yang ada di editor.
-3. Tempel kode di bawah ini dan klik **Run**.
+### 1. Di mana mencari ANON_KEY yang benar?
+Buka server tempat Supabase diinstal (Docker), cari file `.env`:
+- Cari variabel bernama `ANON_KEY`.
+- Key yang benar selalu dimulai dengan `eyJ...` (ciri khas JWT).
+- Jika Anda hanya menemukan key pendek seperti yang Anda berikan tadi, itu mungkin `SERVICE_ROLE_KEY` versi lama atau API Key kustom Kong.
+
+### 2. Cara Membuat JWT Secara Manual (Jika tahu JWT_SECRET)
+Jika Anda memiliki `JWT_SECRET` dari server, Anda bisa membuat token di [jwt.io](https://jwt.io):
+- **Header:** `{"alg": "HS256", "typ": "JWT"}`
+- **Payload:** `{"role": "anon", "iss": "supabase", "iat": 1700000000, "exp": 2700000000}`
+- **Verify Signature:** Masukkan `JWT_SECRET` Anda.
+- Hasilnya adalah string panjang yang harus ditaruh di variabel `SUPABASE_ANON_KEY` pada `store.ts`.
+
+---
+
+# ☢️ NUCLEAR FIX: Reset Permissions & Tables
+
+Jalankan ini di SQL Editor Supabase Waruna untuk memastikan role `anon` bisa menulis data:
 
 ```sql
--- 1. HAPUS TABEL LAMA (BERSIHKAN SEMUA)
-DROP TABLE IF EXISTS public.barang CASCADE;
-DROP TABLE IF EXISTS public.lokasi CASCADE;
-DROP TABLE IF EXISTS public.users CASCADE;
-DROP TABLE IF EXISTS public.settings CASCADE;
+-- 1. BERIKAN IZIN AKSES (PENTING UNTUK SELF-HOSTED)
+GRANT USAGE ON SCHEMA public TO anon;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon;
+GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO anon;
 
--- 2. BUAT ULANG TABEL LOKASI (HURUF KECIL SEMUA)
+-- 2. RESET TABEL LOKASI DENGAN IZIN BENAR
+DROP TABLE IF EXISTS public.lokasi CASCADE;
 CREATE TABLE public.lokasi (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     kode_lokasi TEXT UNIQUE NOT NULL,
@@ -23,7 +38,8 @@ CREATE TABLE public.lokasi (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 3. BUAT ULANG TABEL BARANG
+-- 3. RESET TABEL BARANG
+DROP TABLE IF EXISTS public.barang CASCADE;
 CREATE TABLE public.barang (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     sku TEXT UNIQUE NOT NULL,
@@ -35,39 +51,15 @@ CREATE TABLE public.barang (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 4. BUAT ULANG TABEL SETTINGS
-CREATE TABLE public.settings (
-    id TEXT PRIMARY KEY,
-    value JSONB NOT NULL
-);
-
--- 5. BUAT ULANG TABEL USERS
-CREATE TABLE public.users (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    username TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    role TEXT DEFAULT 'admin',
-    created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- 6. MATIKAN SECURITY (RLS) AGAR API BISA MENULIS DATA
+-- 4. MATIKAN RLS (KEAMANAN) AGAR BISA DIAKSES ANON
 ALTER TABLE public.lokasi DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.barang DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.settings DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.settings DISABLE ROW LEVEL SECURITY;
 
--- 7. BERIKAN IZIN AKSES KE ROLE ANON (WEB)
-GRANT ALL ON SCHEMA public TO anon, authenticated, service_role;
-GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
-
--- 8. ISI DATA AWAL (DUMMY)
+-- 5. ISI DATA AWAL
 INSERT INTO public.lokasi (kode_lokasi, nama_lokasi) VALUES ('WH-A1', 'Gudang Utama A1');
-INSERT INTO public.users (username, password, role) VALUES ('admin', 'admin', 'admin');
 
--- 9. PAKSA RELOAD SCHEMA (PENTING!)
+-- 6. REFRESH API CACHE
 NOTIFY pgrst, 'reload schema';
 ```
-
-### Mengapa ini perlu?
-Terkadang Supabase mengunci skema jika ada perubahan yang setengah jalan. Skrip `DROP ... CASCADE` akan memastikan semua "kotoran" skema lama hilang dan diganti dengan struktur yang bersih yang bisa dibaca oleh PostgREST.

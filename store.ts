@@ -3,12 +3,21 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Item, Location, User, AuthState } from './types';
 
+interface Branding {
+  title: string;
+  primaryColor: string;
+}
+
 interface WarehouseStore {
   items: Item[];
   locations: Location[];
   users: (User & { password?: string })[];
   auth: AuthState;
+  branding: Branding;
   
+  // Branding Actions
+  updateBranding: (branding: Partial<Branding>) => void;
+
   // Auth Actions
   login: (user: User) => void;
   logout: () => void;
@@ -39,8 +48,14 @@ const initialItems: Item[] = [
 ];
 
 const initialUsers = [
-  { id: '1', username: 'admin', role: 'admin' as const, password: 'admin' }
+  { id: '1', username: 'admin', role: 'admin' as const, password: 'admin' },
+  { id: '2', username: 'staff', role: 'staff' as const, password: 'staff' }
 ];
+
+const defaultBranding: Branding = {
+  title: 'SmartWarehouse Pro',
+  primaryColor: '#4f46e5' // indigo-600
+};
 
 export const useStore = create<WarehouseStore>()(
   persist(
@@ -49,6 +64,11 @@ export const useStore = create<WarehouseStore>()(
       locations: initialLocations,
       users: initialUsers,
       auth: { user: null, token: null },
+      branding: defaultBranding,
+
+      updateBranding: (branding) => set((state) => ({
+        branding: { ...state.branding, ...branding }
+      })),
 
       login: (user) => set({ 
         auth: { user, token: 'mock-jwt-token' } 
@@ -95,7 +115,6 @@ export const useStore = create<WarehouseStore>()(
     }),
     { 
       name: 'warehouse-storage',
-      // Ensure we don't accidentally wipe the users array on re-hydration if it's already there
       merge: (persistedState: any, currentState) => ({
         ...currentState,
         ...persistedState,

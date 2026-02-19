@@ -12,13 +12,13 @@ export interface Item {
   kategori: string;
   lokasi_id: string;
   stok: number;
-  poto_barang?: string; // Optional field for item image
+  poto_barang?: string;
 }
 
 export interface User {
   id: string;
   username: string;
-  role: 'admin';
+  role: 'admin' | 'staff';
 }
 
 export interface AuthState {

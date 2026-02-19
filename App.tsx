@@ -3,12 +3,10 @@ import React, { useState } from 'react';
 import { useStore } from './store';
 import PublicView from './components/PublicView';
 import AdminView from './components/AdminView';
-import { Package, LogIn, LogOut, AlertCircle } from 'lucide-react';
+import { Package, LogIn, LogOut, AlertCircle, ShieldCheck, User as UserIcon } from 'lucide-react';
 
 const App: React.FC = () => {
-  const [view, setView] = useState<'public' | 'admin'>('public');
-  const { auth, users, login, logout } = useStore();
-  const [showLogin, setShowLogin] = useState(false);
+  const { auth, users, login, logout, branding } = useStore();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -17,14 +15,11 @@ const App: React.FC = () => {
     e.preventDefault();
     setError('');
 
-    // Dynamic lookup in the users array
     const foundUser = users.find(u => u.username === username && u.password === password);
 
     if (foundUser) {
       const { password: _, ...userWithoutPassword } = foundUser;
       login(userWithoutPassword as any);
-      setShowLogin(false);
-      setView('admin');
       setUsername('');
       setPassword('');
     } else {
@@ -32,128 +27,145 @@ const App: React.FC = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen flex flex-col">
-      {/* Navigation Bar */}
-      <nav className="bg-indigo-700 text-white shadow-lg sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setView('public')}>
-              <div className="bg-white p-2 rounded-lg">
-                <Package className="text-indigo-700" size={24} />
+  // If not logged in, show Login Screen
+  if (!auth.user) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 bg-white rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-500">
+          {/* Brand/Illustration Side */}
+          <div 
+            className="hidden md:flex flex-col justify-center items-center p-12 text-white text-center transition-colors duration-500"
+            style={{ backgroundColor: branding.primaryColor }}
+          >
+            <div className="bg-white/20 p-6 rounded-3xl backdrop-blur-md mb-8">
+              <Package size={64} className="text-white" />
+            </div>
+            <h1 className="text-3xl font-extrabold mb-4">{branding.title}</h1>
+            <p className="text-indigo-50 text-lg opacity-90">Manajemen inventaris modern, cepat, dan terorganisir untuk bisnis Anda.</p>
+            <div className="mt-12 space-y-4 text-sm text-white/70">
+              <p>✓ Pelacakan Stok Real-time</p>
+              <p>✓ Multi-lokasi Warehouse</p>
+              <p>✓ Manajemen User Terpusat</p>
+            </div>
+          </div>
+
+          {/* Login Form Side */}
+          <div className="p-8 md:p-12 flex flex-col justify-center">
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-slate-800">Selamat Datang</h2>
+              <p className="text-slate-500">Silakan masuk untuk mengakses sistem</p>
+            </div>
+
+            {error && (
+              <div className="mb-6 p-4 bg-rose-50 text-rose-600 rounded-2xl flex items-center text-sm font-semibold border border-rose-100 animate-shake">
+                <AlertCircle size={20} className="mr-3" />
+                {error}
               </div>
-              <span className="text-xl font-bold tracking-tight">SmartWarehouse</span>
+            )}
+
+            <form onSubmit={handleLogin} className="space-y-6">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Username</label>
+                <div className="relative">
+                  <input 
+                    type="text" 
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 outline-none transition-all pl-12"
+                    style={{ '--tw-ring-color': `${branding.primaryColor}1A`, borderFocusedColor: branding.primaryColor } as any}
+                    placeholder="Masukkan username..."
+                    required
+                  />
+                  <UserIcon size={18} className="absolute left-4 top-3.5 text-slate-400" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Password</label>
+                <div className="relative">
+                  <input 
+                    type="password" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 outline-none transition-all pl-12"
+                    style={{ '--tw-ring-color': `${branding.primaryColor}1A` } as any}
+                    placeholder="••••••••"
+                    required
+                  />
+                  <ShieldCheck size={18} className="absolute left-4 top-3.5 text-slate-400" />
+                </div>
+              </div>
+              <button 
+                type="submit" 
+                className="w-full text-white py-4 rounded-2xl font-bold transition shadow-lg active:scale-[0.98]"
+                style={{ backgroundColor: branding.primaryColor, boxShadow: `0 10px 15px -3px ${branding.primaryColor}33` }}
+              >
+                Sign In
+              </button>
+            </form>
+
+            <div className="mt-8 pt-8 border-t text-center">
+               <p className="text-xs text-slate-400 uppercase tracking-widest font-bold">Akses Sistem</p>
+               <div className="mt-3 flex justify-center space-x-4 text-[10px] text-slate-500">
+                  <span className="bg-slate-100 px-2 py-1 rounded">Admin: admin/admin</span>
+                  <span className="bg-slate-100 px-2 py-1 rounded">Staff: staff/staff</span>
+               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col bg-slate-50">
+      {/* Navigation Bar */}
+      <nav className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-20 items-center">
+            <div className="flex items-center space-x-3">
+              <div 
+                className="p-2.5 rounded-2xl shadow-lg"
+                style={{ backgroundColor: branding.primaryColor, boxShadow: `0 10px 15px -3px ${branding.primaryColor}33` }}
+              >
+                <Package className="text-white" size={24} />
+              </div>
+              <span className="text-xl font-black text-slate-800 tracking-tight">{branding.title}</span>
             </div>
             
-            <div className="flex items-center space-x-4">
-              <button 
-                onClick={() => setView('public')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition ${view === 'public' ? 'bg-indigo-800' : 'hover:bg-indigo-600'}`}
-              >
-                Cari Inventaris
-              </button>
-              
-              {auth.user ? (
-                <>
-                  <button 
-                    onClick={() => setView('admin')}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition ${view === 'admin' ? 'bg-indigo-800' : 'hover:bg-indigo-600'}`}
-                  >
-                    Dashboard
-                  </button>
-                  <button 
-                    onClick={() => { logout(); setView('public'); }}
-                    className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium bg-red-500 hover:bg-red-600 transition"
-                  >
-                    <LogOut size={16} />
-                    <span>Logout</span>
-                  </button>
-                </>
-              ) : (
-                <button 
-                  onClick={() => setShowLogin(true)}
-                  className="flex items-center space-x-1 px-4 py-2 rounded-md text-sm font-medium bg-white text-indigo-700 hover:bg-indigo-50 transition"
+            <div className="flex items-center space-x-6">
+              <div className="flex flex-col items-end mr-2 hidden sm:flex">
+                <span className="text-sm font-bold text-slate-800">{auth.user.username}</span>
+                <span 
+                  className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full"
+                  style={{ backgroundColor: `${branding.primaryColor}1A`, color: branding.primaryColor }}
                 >
-                  <LogIn size={16} />
-                  <span>Admin Login</span>
-                </button>
-              )}
+                  {auth.user.role}
+                </span>
+              </div>
+              <button 
+                onClick={logout}
+                className="flex items-center space-x-2 px-5 py-2.5 rounded-2xl text-sm font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 transition active:scale-95"
+              >
+                <LogOut size={18} />
+                <span>Logout</span>
+              </button>
             </div>
           </div>
         </div>
       </nav>
 
-      {/* Main Content Area */}
+      {/* Role-based View */}
       <main className="flex-grow">
-        {view === 'public' ? <PublicView /> : <AdminView />}
+        {auth.user.role === 'admin' ? <AdminView /> : <PublicView />}
       </main>
 
-      {/* Footer */}
-      <footer className="bg-slate-800 text-slate-400 py-6">
-        <div className="max-w-7xl mx-auto px-4 text-center text-sm">
-          <p>&copy; 2024 SmartWarehouse Management System. All Rights Reserved.</p>
+      <footer className="bg-white border-t py-8">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <p className="text-slate-400 text-sm font-medium">
+            &copy; 2024 {branding.title}. Enterprise Edition v1.0
+          </p>
         </div>
       </footer>
-
-      {/* Login Modal */}
-      {showLogin && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 animate-in zoom-in-95 duration-200">
-            <h2 className="text-2xl font-bold text-slate-800 mb-2">Admin Login</h2>
-            <p className="text-slate-500 mb-6 text-sm">Masuk untuk mengelola stok gudang</p>
-            
-            {error && (
-              <div className="mb-6 p-3 bg-rose-50 text-rose-600 rounded-lg flex items-center text-sm font-medium border border-rose-100">
-                <AlertCircle size={18} className="mr-2" />
-                {error}
-              </div>
-            )}
-
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">Username</label>
-                <input 
-                  type="text" 
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50"
-                  placeholder="admin"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">Password</label>
-                <input 
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50"
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
-              <div className="flex space-x-3 pt-4">
-                <button 
-                  type="submit" 
-                  className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-100"
-                >
-                  Sign In
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => { setShowLogin(false); setError(''); }}
-                  className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold hover:bg-slate-200 transition"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-            <div className="mt-6 pt-6 border-t text-center">
-               <p className="text-xs text-slate-400">Default: admin / admin</p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

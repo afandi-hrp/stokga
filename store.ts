@@ -12,6 +12,8 @@ interface Branding {
   title: string;
   primaryColor: string;
   logo?: string;
+  description?: string;
+  footerText?: string;
 }
 
 interface WarehouseStore {
@@ -38,12 +40,20 @@ interface WarehouseStore {
   updateBranding: (branding: Partial<Branding>) => Promise<void>;
 }
 
+const DEFAULT_BRANDING = { 
+  title: 'SmartWarehouse Pro', 
+  primaryColor: '#4f46e5', 
+  logo: '',
+  description: 'Sistem Manajemen Pergudangan Terpadu dengan Kontrol Inventaris Real-time.',
+  footerText: 'Cloud Warehouse v1.1'
+};
+
 export const useStore = create<WarehouseStore>((set, get) => ({
   items: [],
   locations: [],
   users: [{ id: 'default-admin', username: 'admin', password: 'admin', role: 'admin' }],
   auth: { user: null, token: null },
-  branding: { title: 'SmartWarehouse Pro', primaryColor: '#4f46e5', logo: '' },
+  branding: DEFAULT_BRANDING,
   isLoading: false,
   schemaError: false,
 
@@ -72,7 +82,7 @@ export const useStore = create<WarehouseStore>((set, get) => ({
         items: (itemsRes.data as Item[]) || [],
         locations: (locsRes.data as Location[]) || [],
         users: finalUsers,
-        branding: brandingRes.data?.value || { title: 'SmartWarehouse Pro', primaryColor: '#4f46e5', logo: '' },
+        branding: brandingRes.data?.value || DEFAULT_BRANDING,
         isLoading: false
       });
     } catch (error) {
@@ -103,19 +113,11 @@ export const useStore = create<WarehouseStore>((set, get) => ({
   },
 
   addLocation: async (locData) => {
-    console.log("🚀 Mencoba menyimpan lokasi:", locData);
     const { error } = await supabase.from('lokasi').insert([locData]);
-    
     if (error) {
-      console.error("❌ ERROR SAAT SIMPAN LOKASI:", error);
-      if (error.message.includes('schema cache') || error.code === 'PGRST103') {
-        set({ schemaError: true });
-      }
-      alert(`SISTEM GAGAL SIMPAN: ${error.message}\n\nKode Error: ${error.code}`);
-    } else {
-      console.log("✅ Berhasil simpan lokasi!");
-      await get().fetchData();
-    }
+      if (error.message.includes('schema cache')) set({ schemaError: true });
+      alert("Gagal tambah lokasi: " + error.message);
+    } else await get().fetchData();
   },
 
   updateLocation: async (id, locData) => {

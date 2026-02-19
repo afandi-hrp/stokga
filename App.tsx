@@ -12,7 +12,6 @@ const App: React.FC = () => {
   const [error, setError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  // Sinkronisasi data saat pertama kali buka
   useEffect(() => {
     fetchData();
   }, []);
@@ -22,14 +21,9 @@ const App: React.FC = () => {
     setError('');
     setIsLoggingIn(true);
 
-    // Memberikan sedikit delay agar UX terasa memproses
     setTimeout(() => {
       const cleanUsername = username.trim().toLowerCase();
       const cleanPassword = password.trim();
-
-      // Debug: Konsol akan membantu jika ada masalah data
-      console.log("Mencoba login dengan:", cleanUsername);
-      console.log("Data user yang tersedia di memori:", users.map(u => u.username));
 
       const foundUser = users.find(u => 
         u.username.toLowerCase() === cleanUsername && 
@@ -48,7 +42,6 @@ const App: React.FC = () => {
     }, 500);
   };
 
-  // Hanya tampilkan loader jika benar-benar baru pertama kali load data branding/inti
   if (isLoading && users.length === 0 && !auth.user) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
@@ -58,18 +51,15 @@ const App: React.FC = () => {
     );
   }
 
-  // If not logged in, show Login Screen
   if (!auth.user) {
     return (
       <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-6 sm:p-12">
         <div className="max-w-5xl w-full grid grid-cols-1 md:grid-cols-12 bg-white rounded-[2.5rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] overflow-hidden animate-in fade-in zoom-in duration-700">
           
-          {/* Visual/Brand Side - 5 Columns */}
           <div 
             className="hidden md:flex md:col-span-5 flex-col justify-between p-12 text-white relative overflow-hidden"
             style={{ backgroundColor: branding.primaryColor }}
           >
-            {/* Background Decorative Element */}
             <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
             <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-64 h-64 bg-black/10 rounded-full blur-3xl"></div>
 
@@ -85,7 +75,7 @@ const App: React.FC = () => {
                 {branding.title}
               </h1>
               <p className="text-white/80 text-lg leading-relaxed max-w-xs">
-                Sistem Manajemen Pergudangan Terpadu dengan Kontrol Inventaris Real-time.
+                {branding.description || 'Sistem Manajemen Pergudangan Terpadu dengan Kontrol Inventaris Real-time.'}
               </p>
             </div>
 
@@ -105,7 +95,6 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          {/* Login Form Side - 7 Columns */}
           <div className="md:col-span-7 p-10 md:p-20 flex flex-col justify-center bg-white">
             <div className="mb-10">
               <div className="flex items-center space-x-2 text-indigo-600 font-bold text-xs uppercase tracking-widest mb-2">
@@ -192,7 +181,6 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
-      {/* Navigation Bar */}
       <nav className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20 items-center">
@@ -232,7 +220,6 @@ const App: React.FC = () => {
         </div>
       </nav>
 
-      {/* Role-based View */}
       <main className="flex-grow">
         {auth.user.role === 'admin' ? <AdminView /> : <PublicView />}
       </main>
@@ -240,7 +227,7 @@ const App: React.FC = () => {
       <footer className="bg-white border-t py-8">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <p className="text-slate-400 text-sm font-medium">
-            &copy; 2024 {branding.title}. Cloud Warehouse v1.1
+            &copy; 2024 {branding.title}. {branding.footerText || 'Cloud Warehouse v1.1'}
           </p>
         </div>
       </footer>

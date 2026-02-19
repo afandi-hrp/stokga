@@ -4,7 +4,7 @@ import { useStore } from '../store';
 import { 
   Lock, Save, Key, AlertCircle, CheckCircle2, 
   Palette, Type, Package, Image as ImageIcon, 
-  Download, Upload, Database, AlertTriangle, Cloud 
+  Download, Upload, Database, AlertTriangle, Cloud, AlignLeft, Layout
 } from 'lucide-react';
 
 const Settings: React.FC = () => {
@@ -19,7 +19,9 @@ const Settings: React.FC = () => {
   const [brandingForm, setBrandingForm] = useState({
     title: branding.title,
     primaryColor: branding.primaryColor,
-    logo: branding.logo || ''
+    logo: branding.logo || '',
+    description: branding.description || '',
+    footerText: branding.footerText || ''
   });
 
   const [message, setMessage] = useState<{ type: 'error' | 'success', text: string } | null>(null);
@@ -88,18 +90,17 @@ const Settings: React.FC = () => {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
-      {/* Cloud Info */}
       <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 flex items-start space-x-3 shadow-sm">
         <Cloud className="text-indigo-600 flex-shrink-0 mt-0.5" size={20} />
         <div>
           <p className="text-sm font-bold text-indigo-800">Penyimpanan Cloud Aktif</p>
           <p className="text-xs text-indigo-700 leading-relaxed">
-            Data Anda disinkronkan secara aman dengan <b>Supabase PostgreSQL</b>. Perubahan di satu perangkat akan langsung terlihat di perangkat lain yang terhubung ke link database yang sama.
+            Data Anda disinkronkan secara aman dengan <b>Supabase PostgreSQL</b>. Perubahan di satu perangkat akan langsung terlihat di perangkat lain.
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Branding Customization */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8">
           <div className="flex items-center space-x-3 mb-6">
@@ -108,44 +109,72 @@ const Settings: React.FC = () => {
             </div>
             <div>
               <h3 className="text-xl font-bold text-slate-800">Custom Tampilan</h3>
-              <p className="text-sm text-slate-500">Ubah identitas, logo, dan tema warna</p>
+              <p className="text-sm text-slate-500">Ubah identitas, teks, dan tema warna</p>
             </div>
           </div>
 
           <form onSubmit={handleBrandingUpdate} className="space-y-6">
             {brandMessage && (
-              <div className="p-3 bg-green-50 text-green-700 rounded-lg text-xs font-bold border border-green-100">
+              <div className="p-3 bg-green-50 text-green-700 rounded-lg text-xs font-bold border border-green-100 animate-in fade-in">
                 {brandMessage}
               </div>
             )}
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center">
+                  <Type size={14} className="mr-1.5" /> Judul Aplikasi
+                </label>
+                <input 
+                  type="text" required
+                  value={brandingForm.title}
+                  onChange={e => setBrandingForm({...brandingForm, title: e.target.value})}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center">
+                  <ImageIcon size={14} className="mr-1.5" /> URL Logo
+                </label>
+                <input 
+                  type="url"
+                  value={brandingForm.logo}
+                  onChange={e => setBrandingForm({...brandingForm, logo: e.target.value})}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                  placeholder="https://..."
+                />
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center">
-                <Type size={14} className="mr-1.5" /> Judul Aplikasi
+                <AlignLeft size={14} className="mr-1.5" /> Deskripsi Login (Hero Text)
               </label>
-              <input 
-                type="text" required
-                value={brandingForm.title}
-                onChange={e => setBrandingForm({...brandingForm, title: e.target.value})}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+              <textarea 
+                rows={3}
+                value={brandingForm.description}
+                onChange={e => setBrandingForm({...brandingForm, description: e.target.value})}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm resize-none"
+                placeholder="Teks yang muncul di halaman login sebelah kiri..."
               />
             </div>
 
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center">
-                <ImageIcon size={14} className="mr-1.5" /> URL Logo Aplikasi
+                <Layout size={14} className="mr-1.5" /> Teks Footer
               </label>
               <input 
-                type="url"
-                value={brandingForm.logo}
-                onChange={e => setBrandingForm({...brandingForm, logo: e.target.value})}
+                type="text"
+                value={brandingForm.footerText}
+                onChange={e => setBrandingForm({...brandingForm, footerText: e.target.value})}
                 className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
-                placeholder="https://..."
+                placeholder="e.g. Cloud Warehouse v1.1"
               />
             </div>
             
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-3 flex items-center">
-                <Palette size={14} className="mr-1.5" /> Warna Tema
+                <Palette size={14} className="mr-1.5" /> Warna Tema Utama
               </label>
               <div className="flex flex-wrap gap-2 mb-4">
                 {colorPresets.map(color => (
@@ -153,15 +182,15 @@ const Settings: React.FC = () => {
                     key={color}
                     type="button"
                     onClick={() => setBrandingForm({...brandingForm, primaryColor: color})}
-                    className={`w-8 h-8 rounded-full border-2 ${brandingForm.primaryColor === color ? 'border-slate-800 shadow-lg' : 'border-transparent'}`}
+                    className={`w-9 h-9 rounded-full border-2 transition-all hover:scale-110 ${brandingForm.primaryColor === color ? 'border-slate-800 shadow-lg scale-110' : 'border-transparent opacity-60'}`}
                     style={{ backgroundColor: color }}
                   />
                 ))}
               </div>
             </div>
 
-            <button type="submit" className="w-full bg-slate-800 text-white py-3 rounded-xl font-bold hover:bg-slate-900 transition shadow-lg">
-              Update Tampilan
+            <button type="submit" className="w-full bg-slate-800 text-white py-4 rounded-xl font-bold hover:bg-slate-900 transition shadow-lg active:scale-95">
+              Simpan Perubahan Tampilan
             </button>
           </form>
         </div>
@@ -174,36 +203,47 @@ const Settings: React.FC = () => {
             </div>
             <div>
               <h3 className="text-xl font-bold text-slate-800">Keamanan Akun</h3>
-              <p className="text-sm text-slate-500">Ganti password admin</p>
+              <p className="text-sm text-slate-500">Ganti password admin saat ini</p>
             </div>
           </div>
           
           <form onSubmit={handlePasswordChange} className="space-y-4">
             {message && (
-              <div className={`p-3 rounded-lg text-xs font-bold border ${message.type === 'success' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-rose-50 text-rose-700 border-rose-100'}`}>
+              <div className={`p-3 rounded-lg text-xs font-bold border animate-in slide-in-from-top-1 ${message.type === 'success' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-rose-50 text-rose-700 border-rose-100'}`}>
                 {message.text}
               </div>
             )}
-            <input 
-              type="password" required placeholder="Password Saat Ini"
-              value={passData.current}
-              onChange={e => setPassData({...passData, current: e.target.value})}
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-            <input 
-              type="password" required placeholder="Password Baru"
-              value={passData.new}
-              onChange={e => setPassData({...passData, new: e.target.value})}
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-            <input 
-              type="password" required placeholder="Ulangi Password Baru"
-              value={passData.confirm}
-              onChange={e => setPassData({...passData, confirm: e.target.value})}
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-            <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg">
-              Simpan Password Baru
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Password Sekarang</label>
+                <input 
+                  type="password" required
+                  value={passData.current}
+                  onChange={e => setPassData({...passData, current: e.target.value})}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Password Baru</label>
+                <input 
+                  type="password" required
+                  value={passData.new}
+                  onChange={e => setPassData({...passData, new: e.target.value})}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Konfirmasi Password Baru</label>
+                <input 
+                  type="password" required
+                  value={passData.confirm}
+                  onChange={e => setPassData({...passData, confirm: e.target.value})}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+            <button type="submit" className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg mt-4 active:scale-95">
+              Update Password
             </button>
           </form>
         </div>
@@ -211,22 +251,22 @@ const Settings: React.FC = () => {
 
       {/* Export Utility */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div className="flex items-center space-x-3 text-center sm:text-left">
             <div className="p-3 bg-slate-100 rounded-xl text-slate-600">
               <Download size={24} />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-slate-800">Backup Data</h3>
-              <p className="text-sm text-slate-500">Unduh snapshot data saat ini untuk arsip offline</p>
+              <h3 className="text-xl font-bold text-slate-800">Backup Data Utama</h3>
+              <p className="text-sm text-slate-500">Unduh snapshot data barang & lokasi untuk arsip offline</p>
             </div>
           </div>
           <button 
             onClick={handleExportData}
-            className="flex items-center space-x-2 bg-slate-800 text-white px-6 py-3 rounded-xl font-bold hover:bg-slate-900 transition shadow-lg"
+            className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-slate-800 text-white px-8 py-4 rounded-xl font-bold hover:bg-slate-900 transition shadow-lg active:scale-95"
           >
             <Download size={18} />
-            <span>Export Snapshot</span>
+            <span>Export Snapshot .JSON</span>
           </button>
         </div>
       </div>

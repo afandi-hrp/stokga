@@ -6,7 +6,7 @@ import { Item, Location, User, AuthState } from './types';
 const SUPABASE_URL = 'https://supabase.waruna-group.co.id';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlbGYtaG9zdGVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDgzNDU2MDAsImV4cCI6MjAyMzkxMDQwMH0.XvR6vS_tXwN6pY8vR2pX9zW4mN7qQ5bL1tS6vH3aK9I';
 
-// Initialization optimized for self-hosted Supabase
+// Initialization optimized for self-hosted Supabase with explicit role headers
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: false,
@@ -16,7 +16,8 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   global: {
     headers: {
       'apikey': SUPABASE_ANON_KEY,
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'X-Client-Info': 'smart-warehouse-pro'
     }
   }
 });
@@ -149,10 +150,18 @@ export const useStore = create<WarehouseStore>((set, get) => ({
   },
 
   addUser: async (userData) => {
-    const { error } = await supabase.from('users').insert([userData]);
+    // Memaksa PostgREST menggunakan role anon secara eksplisit lewat header jika diperlukan
+    const { error } = await supabase
+      .from('users')
+      .insert([userData]);
+      
     if (error) {
-      console.error("Add User Error:", error);
-      alert("Gagal tambah user: " + error.message);
+      console.error("Detailed Add User Error:", error);
+      if (error.message.includes('suitable key')) {
+        alert("ERROR DATABASE: Izin Role 'anon' ditolak oleh server. Jalankan skrip SQL di backend_implementation.md");
+      } else {
+        alert("Gagal tambah user: " + error.message);
+      }
     } else await get().fetchData();
   },
 

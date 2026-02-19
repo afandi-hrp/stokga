@@ -112,11 +112,11 @@ const LocationManager: React.FC = () => {
                     <span>Cek Koneksi Lagi</span>
                   </button>
                   <a 
-                    href="https://supabase.com/dashboard/project/xdwrqaeotnokxygralcx/sql/new" 
+                    href="https://supabase.waruna-group.co.id" 
                     target="_blank"
                     className="text-xs font-bold text-slate-500 hover:text-indigo-600 underline flex items-center"
                   >
-                    <Database size={14} className="mr-1" /> Buka SQL Editor Supabase &rarr;
+                    <Database size={14} className="mr-1" /> Buka Dashboard Waruna Supabase &rarr;
                   </a>
                 </div>
               </div>

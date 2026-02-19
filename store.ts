@@ -3,8 +3,8 @@ import { create } from 'zustand';
 import { createClient } from '@supabase/supabase-js';
 import { Item, Location, User, AuthState } from './types';
 
-const SUPABASE_URL = 'https://xdwrqaeotnokxygralcx.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkd3JxYWVvdG5va3h5Z3JhbGN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0Njg5NTIsImV4cCI6MjA4NzA0NDk1Mn0.Kae01Xe0F63KZEskh0tCGEi2fSZmdIwKWHCT8K60SBM';
+const SUPABASE_URL = 'https://supabase.waruna-group.co.id';
+const SUPABASE_ANON_KEY = 'BKBPH0dCsO+zAKxHS7h7S4JrGn1Q/ymofG+riBFZWoiBIsjG6forqxZ3qIs7ouVxrGY6lsoMUCHp7bo8Qd22sg==';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 

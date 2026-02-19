@@ -1,11 +1,15 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useStore } from '../store';
-// Add Package to the imports from lucide-react
-import { Lock, Save, Key, AlertCircle, CheckCircle2, Palette, Type, Package, Image as ImageIcon } from 'lucide-react';
+import { 
+  Lock, Save, Key, AlertCircle, CheckCircle2, 
+  Palette, Type, Package, Image as ImageIcon, 
+  Download, Upload, Database, AlertTriangle 
+} from 'lucide-react';
 
 const Settings: React.FC = () => {
-  const { auth, users, changePassword, branding, updateBranding } = useStore();
+  const { auth, users, changePassword, branding, updateBranding, items, locations } = useStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [passData, setPassData] = useState({
     current: '',
     new: '',
@@ -58,19 +62,77 @@ const Settings: React.FC = () => {
     setTimeout(() => setBrandMessage(null), 3000);
   };
 
+  // --- DATA MANAGEMENT (BACKUP / RESTORE) ---
+  const handleExportData = () => {
+    const backupData = {
+      items,
+      locations,
+      users,
+      branding,
+      exportDate: new Date().toISOString(),
+      version: "1.0"
+    };
+    
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `backup_wms_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const content = evt.target?.result as string;
+        const data = JSON.parse(content);
+        
+        if (!data.items || !data.locations) {
+          throw new Error("Format file tidak valid");
+        }
+
+        if (confirm("⚠️ PERINGATAN: Mengimpor data akan menggantikan data yang ada saat ini. Lanjutkan?")) {
+          // Update store directly (this works because of zustand persist)
+          useStore.setState({
+            items: data.items,
+            locations: data.locations,
+            users: data.users || users,
+            branding: data.branding || branding
+          });
+          alert("Data berhasil dipulihkan! Halaman akan dimuat ulang.");
+          window.location.reload();
+        }
+      } catch (err) {
+        alert("Gagal mengimpor data: " + (err as Error).message);
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const colorPresets = [
-    '#4f46e5', // Indigo
-    '#0ea5e9', // Sky
-    '#10b981', // Emerald
-    '#f43f5e', // Rose
-    '#f59e0b', // Amber
-    '#8b5cf6', // Violet
-    '#22c55e', // Green
-    '#334155'  // Slate
+    '#4f46e5', '#0ea5e9', '#10b981', '#f43f5e', '#f59e0b', '#8b5cf6', '#22c55e', '#334155'
   ];
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      
+      {/* Alert Warning for LocalStorage */}
+      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start space-x-3">
+        <AlertTriangle className="text-amber-600 flex-shrink-0 mt-0.5" size={20} />
+        <div>
+          <p className="text-sm font-bold text-amber-800">Informasi Penyimpanan</p>
+          <p className="text-xs text-amber-700 leading-relaxed">
+            Data Anda saat ini tersimpan di <b>LocalStorage Browser</b>. Jika Anda mengakses aplikasi dari URL Vercel yang berbeda (Preview URL), data mungkin tampak kosong. Gunakan fitur <b>Export Data</b> di bawah untuk memindahkan data antar browser atau URL.
+          </p>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Branding Customization */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8">
@@ -80,16 +142,9 @@ const Settings: React.FC = () => {
             </div>
             <div>
               <h3 className="text-xl font-bold text-slate-800">Custom Tampilan</h3>
-              <p className="text-sm text-slate-500">Ubah identitas, logo, dan tema warna aplikasi</p>
+              <p className="text-sm text-slate-500">Ubah identitas, logo, dan tema warna</p>
             </div>
           </div>
-
-          {brandMessage && (
-            <div className="mb-6 p-4 bg-green-50 text-green-600 border border-green-100 rounded-xl flex items-center text-sm font-medium">
-              <CheckCircle2 size={18} className="mr-2" />
-              {brandMessage}
-            </div>
-          )}
 
           <form onSubmit={handleBrandingUpdate} className="space-y-6">
             <div>
@@ -100,8 +155,7 @@ const Settings: React.FC = () => {
                 type="text" required
                 value={brandingForm.title}
                 onChange={e => setBrandingForm({...brandingForm, title: e.target.value})}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                placeholder="SmartWarehouse Pro"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
               />
             </div>
 
@@ -114,155 +168,112 @@ const Settings: React.FC = () => {
                   type="url"
                   value={brandingForm.logo}
                   onChange={e => setBrandingForm({...brandingForm, logo: e.target.value})}
-                  className="flex-grow px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm"
-                  placeholder="https://example.com/logo.png"
+                  className="flex-grow px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                  placeholder="https://..."
                 />
-                {brandingForm.logo && (
-                  <div className="w-12 h-10 bg-slate-100 rounded-xl overflow-hidden border border-slate-200 p-1 flex items-center justify-center">
-                    <img src={brandingForm.logo} alt="Logo Preview" className="max-w-full max-h-full object-contain" />
-                  </div>
-                )}
               </div>
-              <p className="text-[10px] text-slate-400 mt-1 italic">Kosongkan jika ingin menggunakan ikon default.</p>
             </div>
             
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-3 flex items-center">
-                <Palette size={14} className="mr-1.5" /> Warna Tema Utama
+                <Palette size={14} className="mr-1.5" /> Warna Tema
               </label>
-              <div className="flex flex-wrap gap-3 mb-4">
+              <div className="flex flex-wrap gap-2 mb-4">
                 {colorPresets.map(color => (
                   <button
                     key={color}
                     type="button"
                     onClick={() => setBrandingForm({...brandingForm, primaryColor: color})}
-                    className={`w-10 h-10 rounded-full border-4 transition-all scale-100 active:scale-90 ${brandingForm.primaryColor === color ? 'border-slate-300 scale-110 shadow-lg' : 'border-transparent hover:scale-105'}`}
+                    className={`w-8 h-8 rounded-full border-2 ${brandingForm.primaryColor === color ? 'border-slate-800' : 'border-transparent'}`}
                     style={{ backgroundColor: color }}
                   />
                 ))}
               </div>
-              <div className="flex items-center space-x-3">
-                <input 
-                  type="color" 
-                  value={brandingForm.primaryColor}
-                  onChange={e => setBrandingForm({...brandingForm, primaryColor: e.target.value})}
-                  className="w-12 h-10 p-0 border-none bg-transparent cursor-pointer"
-                />
-                <span className="text-xs font-mono font-bold text-slate-400">{brandingForm.primaryColor.toUpperCase()}</span>
-              </div>
             </div>
 
-            <button 
-              type="submit"
-              className="w-full flex items-center justify-center space-x-2 bg-slate-800 text-white py-3.5 rounded-xl font-bold hover:bg-slate-900 transition shadow-lg mt-4"
-            >
-              <Save size={18} />
-              <span>Update Branding</span>
+            <button type="submit" className="w-full bg-slate-800 text-white py-3 rounded-xl font-bold hover:bg-slate-900 transition">
+              Update Tampilan
             </button>
           </form>
         </div>
 
-        {/* Password Change */}
+        {/* Data Management Section */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8">
           <div className="flex items-center space-x-3 mb-6">
-            <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600">
-              <Key size={24} />
+            <div className="p-3 bg-emerald-50 rounded-xl text-emerald-600">
+              <Database size={24} />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-slate-800">Ganti Password Admin</h3>
-              <p className="text-sm text-slate-500">Perbarui kredensial keamanan akun Anda</p>
+              <h3 className="text-xl font-bold text-slate-800">Manajemen Data</h3>
+              <p className="text-sm text-slate-500">Backup atau pulihkan database lokal Anda</p>
             </div>
           </div>
 
-          {message && (
-            <div className={`mb-6 p-4 rounded-xl flex items-center text-sm font-medium border animate-in fade-in zoom-in-95 ${
-              message.type === 'error' ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-green-50 text-green-600 border-green-100'
-            }`}>
-              {message.type === 'error' ? <AlertCircle size={18} className="mr-2" /> : <CheckCircle2 size={18} className="mr-2" />}
-              {message.text}
+          <div className="space-y-4">
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              <h4 className="text-sm font-bold text-slate-700 mb-2">Export Seluruh Data</h4>
+              <p className="text-xs text-slate-500 mb-4">Simpan semua barang, lokasi, dan pengaturan ke file JSON.</p>
+              <button 
+                onClick={handleExportData}
+                className="w-full flex items-center justify-center space-x-2 bg-white border border-slate-200 text-slate-700 py-3 rounded-xl font-bold hover:bg-slate-50 transition shadow-sm"
+              >
+                <Download size={18} />
+                <span>Download Backup (.json)</span>
+              </button>
             </div>
-          )}
 
-          <form onSubmit={handlePasswordChange} className="space-y-4">
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Password Saat Ini</label>
-              <input 
-                type="password" required
-                value={passData.current}
-                onChange={e => setPassData({...passData, current: e.target.value})}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                placeholder="••••••••"
-              />
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              <h4 className="text-sm font-bold text-slate-700 mb-2">Restore / Import Data</h4>
+              <p className="text-xs text-slate-500 mb-4">Unggah file backup untuk memulihkan data ke browser ini.</p>
+              <input type="file" ref={fileInputRef} onChange={handleImportData} accept=".json" className="hidden" />
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full flex items-center justify-center space-x-2 bg-indigo-50 text-indigo-700 py-3 rounded-xl font-bold hover:bg-indigo-100 transition"
+              >
+                <Upload size={18} />
+                <span>Upload & Restore Data</span>
+              </button>
             </div>
-            <div className="pt-2 border-t border-slate-100 mt-2">
-              <label className="block text-sm font-bold text-slate-700 mb-1">Password Baru</label>
-              <input 
-                type="password" required minLength={5}
-                value={passData.new}
-                onChange={e => setPassData({...passData, new: e.target.value})}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                placeholder="••••••••"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Konfirmasi Password Baru</label>
-              <input 
-                type="password" required minLength={5}
-                value={passData.confirm}
-                onChange={e => setPassData({...passData, confirm: e.target.value})}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                placeholder="••••••••"
-              />
-            </div>
-            <button 
-              type="submit"
-              className="w-full flex items-center justify-center space-x-2 bg-indigo-600 text-white py-3.5 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-100 mt-4"
-              style={{ backgroundColor: branding.primaryColor }}
-            >
-              <Save size={18} />
-              <span>Simpan Perubahan</span>
-            </button>
-          </form>
+          </div>
         </div>
       </div>
 
-      <div className="bg-gradient-to-br from-slate-700 to-slate-900 rounded-3xl p-8 text-white shadow-xl">
-        <div className="flex flex-col md:flex-row items-center gap-8">
-          <div className="flex-1">
-             <h3 className="text-2xl font-bold mb-4">Preview Login Screen</h3>
-             <p className="text-slate-300 text-sm mb-6">Berikut adalah tampilan sidebar pada menu login dengan konfigurasi saat ini:</p>
-             <div className="bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-sm">
-                <div 
-                  className="w-full aspect-video rounded-xl flex flex-col items-center justify-center p-6 text-center transition-all duration-500"
-                  style={{ backgroundColor: brandingForm.primaryColor }}
-                >
-                  {brandingForm.logo ? (
-                    <img src={brandingForm.logo} alt="Logo" className="max-w-[40px] max-h-[40px] mb-2 object-contain" />
-                  ) : (
-                    <Package size={32} className="mb-2" />
-                  )}
-                  <h4 className="font-bold text-lg">{brandingForm.title}</h4>
-                  <p className="text-[10px] opacity-70">Sistem Manajemen Gudang Profesional</p>
-                </div>
-             </div>
+      {/* Password Change - Kept for utility */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 max-w-2xl">
+        <div className="flex items-center space-x-3 mb-6">
+          <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600">
+            <Key size={24} />
           </div>
-          <div className="flex-1 space-y-4">
-            <h4 className="font-bold text-lg">Keamanan & Branding</h4>
-            <p className="text-slate-400 text-sm leading-relaxed">
-              Semua perubahan branding akan langsung diterapkan ke seluruh halaman aplikasi, termasuk halaman Login Staff dan Admin Dashboard. Warna tema yang Anda pilih akan digunakan sebagai elemen warna primer aplikasi.
-            </p>
-            <div className="grid grid-cols-2 gap-4">
-               <div className="bg-white/10 p-3 rounded-xl border border-white/5">
-                  <p className="text-[10px] uppercase font-bold text-slate-500 mb-1">Status UI</p>
-                  <p className="text-xs font-bold text-green-400">Teroptimasi</p>
-               </div>
-               <div className="bg-white/10 p-3 rounded-xl border border-white/5">
-                  <p className="text-[10px] uppercase font-bold text-slate-500 mb-1">Color Mode</p>
-                  <p className="text-xs font-bold">RGB / HEX</p>
-               </div>
-            </div>
+          <div>
+            <h3 className="text-xl font-bold text-slate-800">Keamanan Akun</h3>
+            <p className="text-sm text-slate-500">Ganti password admin</p>
           </div>
         </div>
+        <form onSubmit={handlePasswordChange} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="sm:col-span-2">
+            <input 
+              type="password" required placeholder="Password Saat Ini"
+              value={passData.current}
+              onChange={e => setPassData({...passData, current: e.target.value})}
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none"
+            />
+          </div>
+          <input 
+            type="password" required placeholder="Password Baru"
+            value={passData.new}
+            onChange={e => setPassData({...passData, new: e.target.value})}
+            className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none"
+          />
+          <input 
+            type="password" required placeholder="Ulangi Password"
+            value={passData.confirm}
+            onChange={e => setPassData({...passData, confirm: e.target.value})}
+            className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none"
+          />
+          <button type="submit" className="sm:col-span-2 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg">
+            Simpan Password Baru
+          </button>
+        </form>
       </div>
     </div>
   );

@@ -1,21 +1,25 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from './store';
 import PublicView from './components/PublicView';
 import AdminView from './components/AdminView';
-import { Package, LogIn, LogOut, AlertCircle, ShieldCheck, User as UserIcon } from 'lucide-react';
+import { Package, LogIn, LogOut, AlertCircle, ShieldCheck, User as UserIcon, Loader2 } from 'lucide-react';
 
 const App: React.FC = () => {
-  const { auth, users, login, logout, branding } = useStore();
+  const { auth, users, login, logout, branding, fetchData, isLoading } = useStore();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+
+  // Sinkronisasi data saat pertama kali buka
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    // PERBAIKAN: Gunakan .trim() untuk menghapus spasi tak sengaja dari keyboard mobile
     const cleanUsername = username.trim();
     const cleanPassword = password.trim();
 
@@ -33,6 +37,15 @@ const App: React.FC = () => {
       setError('Username atau password salah!');
     }
   };
+
+  if (isLoading && !auth.user && users.length === 0) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+        <Loader2 size={48} className="text-indigo-600 animate-spin mb-4" />
+        <p className="text-slate-500 font-medium">Menghubungkan ke Database Supabase...</p>
+      </div>
+    );
+  }
 
   // If not logged in, show Login Screen
   if (!auth.user) {
@@ -54,7 +67,7 @@ const App: React.FC = () => {
             <h1 className="text-3xl font-extrabold mb-4">{branding.title}</h1>
             <p className="text-indigo-50 text-lg opacity-90">Manajemen inventaris modern, cepat, dan terorganisir untuk bisnis Anda.</p>
             <div className="mt-12 space-y-4 text-sm text-white/70">
-              <p>✓ Pelacakan Stok Real-time</p>
+              <p>✓ Sinkronisasi Cloud Supabase</p>
               <p>✓ Multi-lokasi Warehouse</p>
               <p>✓ Manajemen User Terpusat</p>
             </div>
@@ -82,7 +95,6 @@ const App: React.FC = () => {
                     type="text" 
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    // PERBAIKAN: Tambahkan atribut untuk mencegah gangguan keyboard iOS
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck="false"
@@ -121,10 +133,9 @@ const App: React.FC = () => {
             </form>
 
             <div className="mt-8 pt-8 border-t text-center">
-               <p className="text-xs text-slate-400 uppercase tracking-widest font-bold">Akses Sistem</p>
+               <p className="text-xs text-slate-400 uppercase tracking-widest font-bold">Akses Sistem (Sync Cloud)</p>
                <div className="mt-3 flex flex-wrap justify-center gap-2 text-[10px] text-slate-500">
-                  <span className="bg-slate-100 px-2 py-1 rounded">Admin: admin/admin</span>
-                  <span className="bg-slate-100 px-2 py-1 rounded">Staff: staff/staff</span>
+                  <span className="bg-slate-100 px-2 py-1 rounded">Pastikan Tabel Supabase Sudah Dibuat</span>
                </div>
             </div>
           </div>
@@ -183,7 +194,7 @@ const App: React.FC = () => {
       <footer className="bg-white border-t py-8">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <p className="text-slate-400 text-sm font-medium">
-            &copy; 2024 {branding.title}. Enterprise Edition v1.0
+            &copy; 2024 {branding.title}. Supabase Cloud Sync v1.1
           </p>
         </div>
       </footer>

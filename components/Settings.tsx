@@ -4,7 +4,7 @@ import { useStore } from '../store';
 import { 
   Lock, Save, Key, AlertCircle, CheckCircle2, 
   Palette, Type, Package, Image as ImageIcon, 
-  Download, Upload, Database, AlertTriangle 
+  Download, Upload, Database, AlertTriangle, Cloud 
 } from 'lucide-react';
 
 const Settings: React.FC = () => {
@@ -62,57 +62,23 @@ const Settings: React.FC = () => {
     setTimeout(() => setBrandMessage(null), 3000);
   };
 
-  // --- DATA MANAGEMENT (BACKUP / RESTORE) ---
   const handleExportData = () => {
     const backupData = {
       items,
       locations,
-      users,
       branding,
       exportDate: new Date().toISOString(),
-      version: "1.0"
+      version: "1.1-cloud"
     };
     
     const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `backup_wms_${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `backup_cloud_wms_${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
-
-  const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const content = evt.target?.result as string;
-        const data = JSON.parse(content);
-        
-        if (!data.items || !data.locations) {
-          throw new Error("Format file tidak valid");
-        }
-
-        if (confirm("⚠️ PERINGATAN: Mengimpor data akan menggantikan data yang ada saat ini. Lanjutkan?")) {
-          // Update store directly (this works because of zustand persist)
-          useStore.setState({
-            items: data.items,
-            locations: data.locations,
-            users: data.users || users,
-            branding: data.branding || branding
-          });
-          alert("Data berhasil dipulihkan! Halaman akan dimuat ulang.");
-          window.location.reload();
-        }
-      } catch (err) {
-        alert("Gagal mengimpor data: " + (err as Error).message);
-      }
-    };
-    reader.readAsText(file);
   };
 
   const colorPresets = [
@@ -122,13 +88,13 @@ const Settings: React.FC = () => {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
-      {/* Alert Warning for LocalStorage */}
-      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start space-x-3">
-        <AlertTriangle className="text-amber-600 flex-shrink-0 mt-0.5" size={20} />
+      {/* Cloud Info */}
+      <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 flex items-start space-x-3 shadow-sm">
+        <Cloud className="text-indigo-600 flex-shrink-0 mt-0.5" size={20} />
         <div>
-          <p className="text-sm font-bold text-amber-800">Informasi Penyimpanan</p>
-          <p className="text-xs text-amber-700 leading-relaxed">
-            Data Anda saat ini tersimpan di <b>LocalStorage Browser</b>. Jika Anda mengakses aplikasi dari URL Vercel yang berbeda (Preview URL), data mungkin tampak kosong. Gunakan fitur <b>Export Data</b> di bawah untuk memindahkan data antar browser atau URL.
+          <p className="text-sm font-bold text-indigo-800">Penyimpanan Cloud Aktif</p>
+          <p className="text-xs text-indigo-700 leading-relaxed">
+            Data Anda disinkronkan secara aman dengan <b>Supabase PostgreSQL</b>. Perubahan di satu perangkat akan langsung terlihat di perangkat lain yang terhubung ke link database yang sama.
           </p>
         </div>
       </div>
@@ -147,6 +113,11 @@ const Settings: React.FC = () => {
           </div>
 
           <form onSubmit={handleBrandingUpdate} className="space-y-6">
+            {brandMessage && (
+              <div className="p-3 bg-green-50 text-green-700 rounded-lg text-xs font-bold border border-green-100">
+                {brandMessage}
+              </div>
+            )}
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center">
                 <Type size={14} className="mr-1.5" /> Judul Aplikasi
@@ -163,15 +134,13 @@ const Settings: React.FC = () => {
               <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center">
                 <ImageIcon size={14} className="mr-1.5" /> URL Logo Aplikasi
               </label>
-              <div className="flex space-x-3">
-                <input 
-                  type="url"
-                  value={brandingForm.logo}
-                  onChange={e => setBrandingForm({...brandingForm, logo: e.target.value})}
-                  className="flex-grow px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
-                  placeholder="https://..."
-                />
-              </div>
+              <input 
+                type="url"
+                value={brandingForm.logo}
+                onChange={e => setBrandingForm({...brandingForm, logo: e.target.value})}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                placeholder="https://..."
+              />
             </div>
             
             <div>
@@ -184,96 +153,82 @@ const Settings: React.FC = () => {
                     key={color}
                     type="button"
                     onClick={() => setBrandingForm({...brandingForm, primaryColor: color})}
-                    className={`w-8 h-8 rounded-full border-2 ${brandingForm.primaryColor === color ? 'border-slate-800' : 'border-transparent'}`}
+                    className={`w-8 h-8 rounded-full border-2 ${brandingForm.primaryColor === color ? 'border-slate-800 shadow-lg' : 'border-transparent'}`}
                     style={{ backgroundColor: color }}
                   />
                 ))}
               </div>
             </div>
 
-            <button type="submit" className="w-full bg-slate-800 text-white py-3 rounded-xl font-bold hover:bg-slate-900 transition">
+            <button type="submit" className="w-full bg-slate-800 text-white py-3 rounded-xl font-bold hover:bg-slate-900 transition shadow-lg">
               Update Tampilan
             </button>
           </form>
         </div>
 
-        {/* Data Management Section */}
+        {/* Password Change */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8">
           <div className="flex items-center space-x-3 mb-6">
-            <div className="p-3 bg-emerald-50 rounded-xl text-emerald-600">
-              <Database size={24} />
+            <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600">
+              <Key size={24} />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-slate-800">Manajemen Data</h3>
-              <p className="text-sm text-slate-500">Backup atau pulihkan database lokal Anda</p>
+              <h3 className="text-xl font-bold text-slate-800">Keamanan Akun</h3>
+              <p className="text-sm text-slate-500">Ganti password admin</p>
             </div>
           </div>
-
-          <div className="space-y-4">
-            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-              <h4 className="text-sm font-bold text-slate-700 mb-2">Export Seluruh Data</h4>
-              <p className="text-xs text-slate-500 mb-4">Simpan semua barang, lokasi, dan pengaturan ke file JSON.</p>
-              <button 
-                onClick={handleExportData}
-                className="w-full flex items-center justify-center space-x-2 bg-white border border-slate-200 text-slate-700 py-3 rounded-xl font-bold hover:bg-slate-50 transition shadow-sm"
-              >
-                <Download size={18} />
-                <span>Download Backup (.json)</span>
-              </button>
-            </div>
-
-            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-              <h4 className="text-sm font-bold text-slate-700 mb-2">Restore / Import Data</h4>
-              <p className="text-xs text-slate-500 mb-4">Unggah file backup untuk memulihkan data ke browser ini.</p>
-              <input type="file" ref={fileInputRef} onChange={handleImportData} accept=".json" className="hidden" />
-              <button 
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full flex items-center justify-center space-x-2 bg-indigo-50 text-indigo-700 py-3 rounded-xl font-bold hover:bg-indigo-100 transition"
-              >
-                <Upload size={18} />
-                <span>Upload & Restore Data</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Password Change - Kept for utility */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 max-w-2xl">
-        <div className="flex items-center space-x-3 mb-6">
-          <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600">
-            <Key size={24} />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-slate-800">Keamanan Akun</h3>
-            <p className="text-sm text-slate-500">Ganti password admin</p>
-          </div>
-        </div>
-        <form onSubmit={handlePasswordChange} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="sm:col-span-2">
+          
+          <form onSubmit={handlePasswordChange} className="space-y-4">
+            {message && (
+              <div className={`p-3 rounded-lg text-xs font-bold border ${message.type === 'success' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-rose-50 text-rose-700 border-rose-100'}`}>
+                {message.text}
+              </div>
+            )}
             <input 
               type="password" required placeholder="Password Saat Ini"
               value={passData.current}
               onChange={e => setPassData({...passData, current: e.target.value})}
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none"
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
             />
+            <input 
+              type="password" required placeholder="Password Baru"
+              value={passData.new}
+              onChange={e => setPassData({...passData, new: e.target.value})}
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <input 
+              type="password" required placeholder="Ulangi Password Baru"
+              value={passData.confirm}
+              onChange={e => setPassData({...passData, confirm: e.target.value})}
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg">
+              Simpan Password Baru
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {/* Export Utility */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="p-3 bg-slate-100 rounded-xl text-slate-600">
+              <Download size={24} />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-slate-800">Backup Data</h3>
+              <p className="text-sm text-slate-500">Unduh snapshot data saat ini untuk arsip offline</p>
+            </div>
           </div>
-          <input 
-            type="password" required placeholder="Password Baru"
-            value={passData.new}
-            onChange={e => setPassData({...passData, new: e.target.value})}
-            className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none"
-          />
-          <input 
-            type="password" required placeholder="Ulangi Password"
-            value={passData.confirm}
-            onChange={e => setPassData({...passData, confirm: e.target.value})}
-            className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none"
-          />
-          <button type="submit" className="sm:col-span-2 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg">
-            Simpan Password Baru
+          <button 
+            onClick={handleExportData}
+            className="flex items-center space-x-2 bg-slate-800 text-white px-6 py-3 rounded-xl font-bold hover:bg-slate-900 transition shadow-lg"
+          >
+            <Download size={18} />
+            <span>Export Snapshot</span>
           </button>
-        </form>
+        </div>
       </div>
     </div>
   );

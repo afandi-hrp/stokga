@@ -3,10 +3,9 @@ import { create } from 'zustand';
 import { createClient } from '@supabase/supabase-js';
 import { Item, Location, User, AuthState } from './types';
 
-// NOTE: Masukkan URL dan ANON KEY dari Dashboard Supabase Anda di sini
-// Biasanya didapat dari Project Settings -> API
-const SUPABASE_URL = (window as any).env?.SUPABASE_URL || 'https://your-project.supabase.co';
-const SUPABASE_ANON_KEY = (window as any).env?.SUPABASE_ANON_KEY || 'your-anon-key';
+// Gunakan kredensial yang diberikan secara langsung untuk memastikan aplikasi berjalan
+const SUPABASE_URL = 'https://xdwrqaeotnokxygralcx.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkd3JxYWVvdG5va3h5Z3JhbGN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0Njg5NTIsImV4cCI6MjA4NzA0NDk1Mn0.Kae01Xe0F63KZEskh0tCGEi2fSZmdIwKWHCT8K60SBM';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -62,16 +61,16 @@ export const useStore = create<WarehouseStore>((set, get) => ({
     set({ isLoading: true });
     try {
       const [itemsRes, locsRes, usersRes, brandingRes] = await Promise.all([
-        supabase.from('items').select('*').order('created_at', { ascending: false }),
+        supabase.from('items').select('*').order('sku', { ascending: true }),
         supabase.from('locations').select('*').order('nama_lokasi'),
         supabase.from('users').select('*'),
         supabase.from('settings').select('*').eq('id', 'branding').single()
       ]);
 
       set({
-        items: itemsRes.data || [],
-        locations: locsRes.data || [],
-        users: usersRes.data || [],
+        items: (itemsRes.data as Item[]) || [],
+        locations: (locsRes.data as Location[]) || [],
+        users: (usersRes.data as any[]) || [],
         branding: brandingRes.data?.value || { title: 'SmartWarehouse Pro', primaryColor: '#4f46e5', logo: '' },
         isLoading: false
       });

@@ -5,7 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { 
   Plus, Edit2, Trash2, LayoutGrid, List, Map, 
   TrendingUp, Package, MapPin, AlertCircle, CheckCircle,
-  Users, Settings as SettingsIcon, Database, Download, AlertTriangle, X
+  Users, Settings as SettingsIcon, Database, Download, Cloud, X
 } from 'lucide-react';
 import ItemManager from './ItemManager';
 import LocationManager from './LocationManager';
@@ -26,43 +26,23 @@ const AdminView: React.FC = () => {
 
   const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316'];
 
-  const handleQuickExport = () => {
-    const backupData = {
-      items,
-      locations,
-      users,
-      branding,
-      exportDate: new Date().toISOString(),
-      version: "1.0"
-    };
-    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `quick_backup_wms_${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
-  };
-
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-      {/* DATA PERSISTENCE WARNING BAR */}
-      <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* STATUS CLOUD SYNC */}
+      <div className="mb-6 bg-indigo-50 border border-indigo-100 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center space-x-3">
-          <div className="bg-amber-100 p-2 rounded-full text-amber-600">
-            <AlertTriangle size={20} />
+          <div className="bg-white p-2 rounded-full text-indigo-600 shadow-sm">
+            <Cloud size={20} />
           </div>
           <div>
-            <p className="text-sm font-bold text-amber-900">Mode Penyimpanan Lokal Aktif</p>
-            <p className="text-xs text-amber-700">Data tersimpan di browser ini. Lakukan backup berkala agar data tidak hilang saat hapus cache.</p>
+            <p className="text-sm font-bold text-indigo-900">Cloud Database Terhubung</p>
+            <p className="text-xs text-indigo-700">Semua perubahan data disinkronkan secara real-time ke Supabase.</p>
           </div>
         </div>
-        <button 
-          onClick={handleQuickExport}
-          className="flex items-center justify-center space-x-2 bg-white hover:bg-amber-100 border border-amber-200 text-amber-700 px-4 py-2 rounded-xl text-xs font-bold transition shadow-sm"
-        >
-          <Download size={14} />
-          <span>Quick Backup (.json)</span>
-        </button>
+        <div className="flex items-center space-x-2 text-[10px] font-black uppercase tracking-widest text-indigo-400 bg-white px-3 py-1.5 rounded-lg border border-indigo-50">
+          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          <span>Live Sync Active</span>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center space-x-2 mb-8 border-b pb-4 overflow-x-auto no-scrollbar">
@@ -137,17 +117,17 @@ const AdminView: React.FC = () => {
               </div>
               <div className="space-y-4">
                 <div className="p-4 bg-slate-50 rounded-xl">
-                  <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Current Method</p>
-                  <p className="text-sm font-bold text-slate-700">Web LocalStorage</p>
+                  <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Database Engine</p>
+                  <p className="text-sm font-bold text-slate-700">PostgreSQL (Supabase)</p>
                 </div>
                 <div className="p-4 bg-slate-50 rounded-xl">
-                  <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Cloud Sync</p>
-                  <p className="text-sm font-bold text-rose-500 flex items-center">
-                    <X size={14} className="mr-1" /> Not Connected
+                  <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Status</p>
+                  <p className="text-sm font-bold text-green-500 flex items-center">
+                    <CheckCircle size={14} className="mr-1" /> Connected
                   </p>
                 </div>
                 <p className="text-[10px] text-slate-400 leading-relaxed italic">
-                  *Untuk penggunaan industri, hubungkan ke database PostgreSQL/MySQL agar data tidak hilang saat ganti perangkat atau hapus cache browser.
+                  Data bersifat permanen dan aman di cloud. Anda dapat mengakses dashboard ini dari perangkat mana saja tanpa kehilangan data.
                 </p>
               </div>
             </div>

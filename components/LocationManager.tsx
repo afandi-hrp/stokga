@@ -1,11 +1,11 @@
 
 import React, { useState } from 'react';
 import { useStore } from '../store';
-import { Plus, Edit2, Trash2, MapPin, X, Save, RefreshCw, Search } from 'lucide-react';
+import { Plus, Edit2, Trash2, MapPin, X, Save, RefreshCw, Search, AlertTriangle, Terminal } from 'lucide-react';
 import { Location } from '../types';
 
 const LocationManager: React.FC = () => {
-  const { locations, addLocation, updateLocation, deleteLocation, fetchData, isLoading } = useStore();
+  const { locations, addLocation, updateLocation, deleteLocation, fetchData, isLoading, schemaError } = useStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -76,6 +76,37 @@ const LocationManager: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* SCHEMA CACHE ALERT - SANGAT PENTING JIKA ERROR TERDETEKSI */}
+      {schemaError && (
+        <div className="m-6 p-6 bg-rose-50 border-2 border-rose-200 rounded-2xl animate-pulse">
+          <div className="flex items-start space-x-4">
+            <div className="bg-rose-500 p-2 rounded-lg text-white">
+              <AlertTriangle size={24} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-rose-900">Peringatan: Schema Cache Hilang</h3>
+              <p className="text-sm text-rose-700 mb-4">
+                Supabase belum mendeteksi tabel 'lokasi'. Meskipun data ada di DB, API tidak bisa membacanya.
+              </p>
+              <div className="bg-slate-900 text-slate-300 p-4 rounded-xl font-mono text-xs overflow-x-auto">
+                <div className="flex items-center space-x-2 text-rose-400 mb-2">
+                  <Terminal size={14} />
+                  <span>Jalankan di SQL Editor Supabase:</span>
+                </div>
+                <p>GRANT ALL ON TABLE public.lokasi TO anon;</p>
+                <p>NOTIFY pgrst, 'reload schema';</p>
+              </div>
+              <button 
+                onClick={() => fetchData()}
+                className="mt-4 text-xs font-black uppercase tracking-widest bg-rose-600 text-white px-4 py-2 rounded-lg hover:bg-rose-700 transition"
+              >
+                Sudah saya jalankan, Cek Lagi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isLoading && locations.length === 0 ? (
         <div className="p-20 flex flex-col items-center justify-center text-slate-400">

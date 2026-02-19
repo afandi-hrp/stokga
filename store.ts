@@ -21,6 +21,7 @@ interface WarehouseStore {
   auth: AuthState;
   branding: Branding;
   isLoading: boolean;
+  schemaError: boolean; // Flag baru untuk mendeteksi error schema cache
   
   fetchData: () => Promise<void>;
   login: (user: User) => void;
@@ -44,26 +45,24 @@ export const useStore = create<WarehouseStore>((set, get) => ({
   auth: { user: null, token: null },
   branding: { title: 'SmartWarehouse Pro', primaryColor: '#4f46e5', logo: '' },
   isLoading: false,
+  schemaError: false,
 
   fetchData: async () => {
-    set({ isLoading: true });
+    set({ isLoading: true, schemaError: false });
     try {
-      // Mengambil data secara paralel namun menangani error secara individu
-      const [itemsRes, locsRes, usersRes, brandingRes] = await Promise.all([
-        supabase.from('barang').select('*').order('sku', { ascending: true }),
-        supabase.from('lokasi').select('*').order('nama_lokasi'),
-        supabase.from('users').select('*'),
-        supabase.from('settings').select('*').eq('id', 'branding').maybeSingle()
-      ]);
+      // Mengambil data satu per satu agar error pada satu tabel tidak menghentikan yang lain
+      const itemsRes = await supabase.from('barang').select('*').order('sku', { ascending: true });
+      const locsRes = await supabase.from('lokasi').select('*').order('nama_lokasi');
+      const usersRes = await supabase.from('users').select('*');
+      const brandingRes = await supabase.from('settings').select('*').eq('id', 'branding').maybeSingle();
 
       if (locsRes.error) {
-        console.error("❌ Error Tabel Lokasi:", locsRes.error.message);
-      } else {
-        console.log("✅ Data Lokasi Terambil:", locsRes.data?.length || 0, "rows");
+        console.error("❌ ERROR LOKASI:", locsRes.error.message);
+        if (locsRes.error.message.includes('schema cache')) {
+          set({ schemaError: true });
+          console.warn("💡 TIPS: Supabase PostgREST belum sinkron. Jalankan NOTIFY pgrst, 'reload schema' di SQL Editor.");
+        }
       }
-
-      if (itemsRes.error) console.error("❌ Error Tabel Barang:", itemsRes.error.message);
-      if (usersRes.error) console.error("❌ Error Tabel Users:", usersRes.error.message);
 
       const dbUsers = (usersRes.data as any[]) || [];
       const finalUsers = dbUsers.length > 0 
@@ -106,8 +105,16 @@ export const useStore = create<WarehouseStore>((set, get) => ({
 
   addLocation: async (locData) => {
     const { error } = await supabase.from('lokasi').insert([locData]);
-    if (error) alert("Gagal tambah lokasi: " + error.message);
-    else await get().fetchData();
+    if (error) {
+      if (error.message.includes('schema cache')) {
+        set({ schemaError: true });
+        alert("SISTEM ERROR: Supabase belum mendeteksi tabel 'lokasi'. Silakan jalankan script perbaikan di SQL Editor Supabase.");
+      } else {
+        alert("Gagal tambah lokasi: " + error.message);
+      }
+    } else {
+      await get().fetchData();
+    }
   },
 
   updateLocation: async (id, locData) => {

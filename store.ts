@@ -3,7 +3,6 @@ import { create } from 'zustand';
 import { createClient } from '@supabase/supabase-js';
 import { Item, Location, User, AuthState } from './types';
 
-// Pastikan kredensial ini sesuai dengan project Supabase Anda yang aktif
 const SUPABASE_URL = 'https://xdwrqaeotnokxygralcx.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkd3JxYWVvdG5va3h5Z3JhbGN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0Njg5NTIsImV4cCI6MjA4NzA0NDk1Mn0.Kae01Xe0F63KZEskh0tCGEi2fSZmdIwKWHCT8K60SBM';
 
@@ -51,8 +50,6 @@ export const useStore = create<WarehouseStore>((set, get) => ({
   fetchData: async () => {
     set({ isLoading: true, schemaError: false });
     try {
-      console.log("🔄 Mencoba mengambil data dari:", SUPABASE_URL);
-      
       const [itemsRes, locsRes, usersRes, brandingRes] = await Promise.all([
         supabase.from('barang').select('*').order('sku', { ascending: true }),
         supabase.from('lokasi').select('*').order('nama_lokasi'),
@@ -61,7 +58,6 @@ export const useStore = create<WarehouseStore>((set, get) => ({
       ]);
 
       if (locsRes.error) {
-        console.error("❌ ERROR LOKASI:", locsRes.error);
         if (locsRes.error.message.includes('schema cache') || locsRes.error.code === 'PGRST103') {
           set({ schemaError: true });
         }
@@ -107,13 +103,17 @@ export const useStore = create<WarehouseStore>((set, get) => ({
   },
 
   addLocation: async (locData) => {
+    console.log("🚀 Mencoba menyimpan lokasi:", locData);
     const { error } = await supabase.from('lokasi').insert([locData]);
+    
     if (error) {
-      if (error.message.includes('schema cache')) {
+      console.error("❌ ERROR SAAT SIMPAN LOKASI:", error);
+      if (error.message.includes('schema cache') || error.code === 'PGRST103') {
         set({ schemaError: true });
       }
-      alert("Gagal tambah lokasi: " + error.message);
+      alert(`SISTEM GAGAL SIMPAN: ${error.message}\n\nKode Error: ${error.code}`);
     } else {
+      console.log("✅ Berhasil simpan lokasi!");
       await get().fetchData();
     }
   },

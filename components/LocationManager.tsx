@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useStore } from '../store';
-import { Plus, Edit2, Trash2, MapPin, X, Save, RefreshCw, Search, AlertTriangle, Terminal } from 'lucide-react';
+import { Plus, Edit2, Trash2, MapPin, X, Save, RefreshCw, Search, AlertTriangle, Terminal, Database } from 'lucide-react';
 import { Location } from '../types';
 
 const LocationManager: React.FC = () => {
@@ -77,32 +77,49 @@ const LocationManager: React.FC = () => {
         </div>
       </div>
 
-      {/* SCHEMA CACHE ALERT - SANGAT PENTING JIKA ERROR TERDETEKSI */}
+      {/* SCHEMA CACHE ALERT - PERBAIKAN TOTAL */}
       {schemaError && (
-        <div className="m-6 p-6 bg-rose-50 border-2 border-rose-200 rounded-2xl animate-pulse">
+        <div className="m-6 p-6 bg-rose-50 border-2 border-rose-200 rounded-2xl">
           <div className="flex items-start space-x-4">
-            <div className="bg-rose-500 p-2 rounded-lg text-white">
+            <div className="bg-rose-500 p-2 rounded-lg text-white animate-pulse">
               <AlertTriangle size={24} />
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-rose-900">Peringatan: Schema Cache Hilang</h3>
+            <div className="flex-grow">
+              <h3 className="text-lg font-bold text-rose-900">Database Masih Terkunci</h3>
               <p className="text-sm text-rose-700 mb-4">
-                Supabase belum mendeteksi tabel 'lokasi'. Meskipun data ada di DB, API tidak bisa membacanya.
+                Supabase menolak akses ke tabel 'lokasi'. Ini biasanya terjadi jika tabel dibuat tanpa izin akses eksplisit.
               </p>
-              <div className="bg-slate-900 text-slate-300 p-4 rounded-xl font-mono text-xs overflow-x-auto">
-                <div className="flex items-center space-x-2 text-rose-400 mb-2">
-                  <Terminal size={14} />
-                  <span>Jalankan di SQL Editor Supabase:</span>
+              
+              <div className="space-y-4">
+                <div className="bg-slate-900 text-slate-300 p-4 rounded-xl font-mono text-xs overflow-x-auto relative group">
+                  <div className="flex items-center space-x-2 text-rose-400 mb-2">
+                    <Terminal size={14} />
+                    <span>Langkah Perbaikan (Jalankan di SQL Editor Supabase):</span>
+                  </div>
+                  <p className="text-white font-bold">-- Langkah 1: Berikan Izin Role Anon</p>
+                  <p>GRANT ALL ON ALL TABLES IN SCHEMA public TO anon;</p>
+                  <p>GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon;</p>
+                  <p className="text-white font-bold mt-2">-- Langkah 2: Paksa Reload API</p>
+                  <p>NOTIFY pgrst, 'reload schema';</p>
                 </div>
-                <p>GRANT ALL ON TABLE public.lokasi TO anon;</p>
-                <p>NOTIFY pgrst, 'reload schema';</p>
+
+                <div className="flex items-center space-x-3">
+                  <button 
+                    onClick={() => fetchData()}
+                    className="bg-rose-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-rose-700 transition shadow-lg flex items-center space-x-2"
+                  >
+                    <RefreshCw size={18} className={isLoading ? "animate-spin" : ""} />
+                    <span>Cek Koneksi Lagi</span>
+                  </button>
+                  <a 
+                    href="https://supabase.com/dashboard/project/xdwrqaeotnokxygralcx/sql/new" 
+                    target="_blank"
+                    className="text-xs font-bold text-slate-500 hover:text-indigo-600 underline flex items-center"
+                  >
+                    <Database size={14} className="mr-1" /> Buka SQL Editor Supabase &rarr;
+                  </a>
+                </div>
               </div>
-              <button 
-                onClick={() => fetchData()}
-                className="mt-4 text-xs font-black uppercase tracking-widest bg-rose-600 text-white px-4 py-2 rounded-lg hover:bg-rose-700 transition"
-              >
-                Sudah saya jalankan, Cek Lagi
-              </button>
             </div>
           </div>
         </div>
@@ -111,7 +128,7 @@ const LocationManager: React.FC = () => {
       {isLoading && locations.length === 0 ? (
         <div className="p-20 flex flex-col items-center justify-center text-slate-400">
           <RefreshCw size={48} className="animate-spin mb-4 opacity-20" />
-          <p className="font-medium">Menghubungkan ke Database...</p>
+          <p className="font-medium">Sinkronisasi Database...</p>
         </div>
       ) : filteredLocations.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
@@ -149,7 +166,7 @@ const LocationManager: React.FC = () => {
           </div>
           <h3 className="text-xl font-bold text-slate-400">Data Lokasi Kosong</h3>
           <p className="text-slate-300 mt-2 max-w-xs mx-auto">
-            Tidak ada data yang ditemukan di tabel 'lokasi'. Pastikan RLS di Supabase sudah dimatikan.
+            Gagal menarik data dari tabel 'lokasi'. Jalankan skrip di SQL Editor jika ini pertama kali Anda menggunakan aplikasi.
           </p>
           <button 
             onClick={() => { setEditingId(null); setIsModalOpen(true); }}

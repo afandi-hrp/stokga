@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { createClient } from '@supabase/supabase-js';
 import { Item, Location, User, AuthState } from './types';
 
+// Gunakan kredensial yang diberikan secara langsung
 const SUPABASE_URL = 'https://xdwrqaeotnokxygralcx.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkd3JxYWVvdG5va3h5Z3JhbGN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0Njg5NTIsImV4cCI6MjA4NzA0NDk1Mn0.Kae01Xe0F63KZEskh0tCGEi2fSZmdIwKWHCT8K60SBM';
 
@@ -51,7 +52,7 @@ interface WarehouseStore {
 export const useStore = create<WarehouseStore>((set, get) => ({
   items: [],
   locations: [],
-  // DEFAULT USER: Menjamin anda selalu bisa login sebagai admin/admin
+  // DEFAULT USER tetap ada sebagai cadangan
   users: [
     { id: 'default-admin', username: 'admin', password: 'admin', role: 'admin' }
   ],
@@ -62,15 +63,14 @@ export const useStore = create<WarehouseStore>((set, get) => ({
   fetchData: async () => {
     set({ isLoading: true });
     try {
+      // PERBAIKAN: Nama tabel disesuaikan dengan SQL (barang, lokasi, users)
       const [itemsRes, locsRes, usersRes, brandingRes] = await Promise.all([
-        supabase.from('items').select('*').order('sku', { ascending: true }),
-        supabase.from('locations').select('*').order('nama_lokasi'),
+        supabase.from('barang').select('*').order('sku', { ascending: true }),
+        supabase.from('lokasi').select('*').order('nama_lokasi'),
         supabase.from('users').select('*'),
         supabase.from('settings').select('*').eq('id', 'branding').single()
       ]);
 
-      // Jika di database ada user, gabungkan dengan default admin. 
-      // Jika kosong, tetap gunakan default admin.
       const dbUsers = (usersRes.data as any[]) || [];
       const finalUsers = dbUsers.length > 0 
         ? dbUsers 
@@ -98,37 +98,37 @@ export const useStore = create<WarehouseStore>((set, get) => ({
   },
 
   addItem: async (itemData) => {
-    const { error } = await supabase.from('items').insert([itemData]);
+    const { error } = await supabase.from('barang').insert([itemData]);
     if (error) alert("Error: " + error.message);
     else await get().fetchData();
   },
 
   updateItem: async (id, itemData) => {
-    const { error } = await supabase.from('items').update(itemData).eq('id', id);
+    const { error } = await supabase.from('barang').update(itemData).eq('id', id);
     if (error) alert("Error: " + error.message);
     else await get().fetchData();
   },
 
   deleteItem: async (id) => {
-    const { error } = await supabase.from('items').delete().eq('id', id);
+    const { error } = await supabase.from('barang').delete().eq('id', id);
     if (error) alert("Error: " + error.message);
     else await get().fetchData();
   },
 
   addLocation: async (locData) => {
-    const { error } = await supabase.from('locations').insert([locData]);
+    const { error } = await supabase.from('lokasi').insert([locData]);
     if (error) alert("Error: " + error.message);
     else await get().fetchData();
   },
 
   updateLocation: async (id, locData) => {
-    const { error } = await supabase.from('locations').update(locData).eq('id', id);
+    const { error } = await supabase.from('lokasi').update(locData).eq('id', id);
     if (error) alert("Error: " + error.message);
     else await get().fetchData();
   },
 
   deleteLocation: async (id) => {
-    const { error } = await supabase.from('locations').delete().eq('id', id);
+    const { error } = await supabase.from('lokasi').delete().eq('id', id);
     if (error) alert("Error: " + error.message);
     else await get().fetchData();
   },

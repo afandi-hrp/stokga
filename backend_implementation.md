@@ -1,65 +1,43 @@
 
 # 🚀 Panduan Khusus Supabase Self-Hosted (Waruna Group)
 
-Jika Anda mendapatkan error **"Expected 3 parts in JWT; got 1"**, itu berarti key yang Anda gunakan di `store.ts` bukan merupakan token JWT yang valid. Supabase Client mewajibkan key tersebut memiliki 3 bagian (dot-separated).
+Jika Anda mendapatkan error **"No suitable key or wrong key type"** saat menambah data (User/Lokasi/Barang), itu berarti API Gateway PostgREST menolak key Anda karena masalah verifikasi JWT atau Izin Role Database.
 
-### 1. Di mana mencari ANON_KEY yang benar?
-Buka server tempat Supabase diinstal (Docker), cari file `.env`:
-- Cari variabel bernama `ANON_KEY`.
-- Key yang benar selalu dimulai dengan `eyJ...` (ciri khas JWT).
-- Jika Anda hanya menemukan key pendek seperti yang Anda berikan tadi, itu mungkin `SERVICE_ROLE_KEY` versi lama atau API Key kustom Kong.
+### 🛠️ Langkah Perbaikan di SQL Editor Supabase:
 
-### 2. Cara Membuat JWT Secara Manual (Jika tahu JWT_SECRET)
-Jika Anda memiliki `JWT_SECRET` dari server, Anda bisa membuat token di [jwt.io](https://jwt.io):
-- **Header:** `{"alg": "HS256", "typ": "JWT"}`
-- **Payload:** `{"role": "anon", "iss": "supabase", "iat": 1700000000, "exp": 2700000000}`
-- **Verify Signature:** Masukkan `JWT_SECRET` Anda.
-- Hasilnya adalah string panjang yang harus ditaruh di variabel `SUPABASE_ANON_KEY` pada `store.ts`.
-
----
-
-# ☢️ NUCLEAR FIX: Reset Permissions & Tables
-
-Jalankan ini di SQL Editor Supabase Waruna untuk memastikan role `anon` bisa menulis data:
+Jalankan perintah SQL ini secara berurutan untuk memperbaiki izin role `anon` (key yang Anda gunakan di aplikasi):
 
 ```sql
--- 1. BERIKAN IZIN AKSES (PENTING UNTUK SELF-HOSTED)
+-- 1. BERIKAN IZIN PADA SCHEMA PUBLIC
 GRANT USAGE ON SCHEMA public TO anon;
+GRANT USAGE ON SCHEMA public TO authenticated;
+
+-- 2. BERIKAN IZIN PADA SEMUA TABEL (PENTING)
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon;
 GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO anon;
 
--- 2. RESET TABEL LOKASI DENGAN IZIN BENAR
-DROP TABLE IF EXISTS public.lokasi CASCADE;
-CREATE TABLE public.lokasi (
+-- 3. PASTIKAN TABEL USERS SUDAH ADA & BISA DIAKSES
+CREATE TABLE IF NOT EXISTS public.users (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    kode_lokasi TEXT UNIQUE NOT NULL,
-    nama_lokasi TEXT NOT NULL,
+    username TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    role TEXT DEFAULT 'staff',
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 3. RESET TABEL BARANG
-DROP TABLE IF EXISTS public.barang CASCADE;
-CREATE TABLE public.barang (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    sku TEXT UNIQUE NOT NULL,
-    nama_barang TEXT NOT NULL,
-    kategori TEXT,
-    stok INTEGER DEFAULT 0,
-    poto_barang TEXT,
-    lokasi_id UUID REFERENCES public.lokasi(id) ON DELETE SET NULL,
-    created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- 4. MATIKAN RLS (KEAMANAN) AGAR BISA DIAKSES ANON
+-- 4. MATIKAN ROW LEVEL SECURITY (RLS) UNTUK AKSES MUDAH
+-- (Hanya lakukan ini jika aplikasi digunakan di lingkungan internal aman)
+ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.lokasi DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.barang DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.settings DISABLE ROW LEVEL SECURITY;
 
--- 5. ISI DATA AWAL
-INSERT INTO public.lokasi (kode_lokasi, nama_lokasi) VALUES ('WH-A1', 'Gudang Utama A1');
-
--- 6. REFRESH API CACHE
+-- 5. REFRESH CACHE API
 NOTIFY pgrst, 'reload schema';
 ```
+
+### Mengapa Error Ini Terjadi?
+1. **JWT Secret Mismatch:** Server Supabase Anda menggunakan `JWT_SECRET` yang berbeda dengan secret yang digunakan untuk menandai `SUPABASE_ANON_KEY` di `store.ts`.
+2. **Missing Claims:** JWT Anda mungkin tidak memiliki klaim `"aud": "anon"`. Jika perbaikan SQL di atas tidak berhasil, Anda harus meminta IT/Admin Server untuk memberikan `ANON_KEY` resmi dari file `.env` server.
+3. **Database Permissions:** Secara default di Supabase, role `anon` seringkali hanya memiliki akses `SELECT`. Perintah `GRANT ALL` di atas akan memberikan izin `INSERT`, `UPDATE`, dan `DELETE`.

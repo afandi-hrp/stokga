@@ -15,7 +15,14 @@ const App: React.FC = () => {
     e.preventDefault();
     setError('');
 
-    const foundUser = users.find(u => u.username === username && u.password === password);
+    // PERBAIKAN: Gunakan .trim() untuk menghapus spasi tak sengaja dari keyboard mobile
+    const cleanUsername = username.trim();
+    const cleanPassword = password.trim();
+
+    const foundUser = users.find(u => 
+      u.username.toLowerCase() === cleanUsername.toLowerCase() && 
+      u.password === cleanPassword
+    );
 
     if (foundUser) {
       const { password: _, ...userWithoutPassword } = foundUser;
@@ -75,6 +82,10 @@ const App: React.FC = () => {
                     type="text" 
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
+                    // PERBAIKAN: Tambahkan atribut untuk mencegah gangguan keyboard iOS
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck="false"
                     className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 outline-none transition-all pl-12"
                     style={{ '--tw-ring-color': `${branding.primaryColor}1A` } as any}
                     placeholder="Masukkan username..."
@@ -90,6 +101,8 @@ const App: React.FC = () => {
                     type="password" 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    autoCapitalize="none"
+                    autoCorrect="off"
                     className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 outline-none transition-all pl-12"
                     style={{ '--tw-ring-color': `${branding.primaryColor}1A` } as any}
                     placeholder="••••••••"

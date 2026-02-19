@@ -1,14 +1,16 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useStore } from '../store';
-import { Plus, Edit2, Trash2, Search, X, Save, Image as ImageIcon, RefreshCw } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, X, Save, Image as ImageIcon, RefreshCw, FileUp, Download } from 'lucide-react';
 import { Item } from '../types';
+import * as XLSX from 'xlsx';
 
 const ItemManager: React.FC = () => {
   const { items, locations, addItem, updateItem, deleteItem } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<Omit<Item, 'id'>>({
     sku: '',
@@ -71,6 +73,62 @@ const ItemManager: React.FC = () => {
 
   const getLocationCode = (id: string) => locations.find(l => l.id === id)?.kode_lokasi || 'N/A';
 
+  // --- EXCEL IMPORT LOGIC ---
+  const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const bstr = evt.target?.result;
+      const wb = XLSX.read(bstr, { type: 'binary' });
+      const wsname = wb.SheetNames[0];
+      const ws = wb.Sheets[wsname];
+      const data = XLSX.utils.sheet_to_json(ws) as any[];
+
+      let importCount = 0;
+      data.forEach((row) => {
+        // Normalisasi header (mendukung variasi nama kolom)
+        const sku = row.SKU || row['sku'] || row['Kode Barang'];
+        const nama = row.Nama || row['nama_barang'] || row['Nama Barang'];
+        const kategori = row.Kategori || row['kategori'] || 'Umum';
+        const kodeLokasi = row['Kode Lokasi'] || row['Lokasi'] || row['lokasi_kode'];
+        const stok = parseInt(row.Stok || row['stok'] || row['Jumlah']) || 0;
+
+        if (sku && nama) {
+          // Cari lokasi_id berdasarkan kode_lokasi di excel
+          const locationMatch = locations.find(l => 
+            l.kode_lokasi.toLowerCase() === String(kodeLokasi || '').toLowerCase()
+          );
+
+          addItem({
+            sku: String(sku),
+            nama_barang: String(nama),
+            kategori: String(kategori),
+            lokasi_id: locationMatch?.id || (locations[0]?.id || ''),
+            stok: stok,
+            poto_barang: ''
+          });
+          importCount++;
+        }
+      });
+
+      alert(`Berhasil mengimpor ${importCount} barang!`);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  const downloadTemplate = () => {
+    const template = [
+      { 'SKU': 'BRG-001', 'Nama Barang': 'Contoh Barang', 'Kategori': 'Elektronik', 'Kode Lokasi': locations[0]?.kode_lokasi || 'WH-A1', 'Stok': 10 }
+    ];
+    const ws = XLSX.utils.json_to_sheet(template);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template");
+    XLSX.writeFile(wb, "Template_Import_Barang.xlsx");
+  };
+
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
       <div className="p-6 border-b flex flex-wrap justify-between items-center gap-4">
@@ -78,24 +136,52 @@ const ItemManager: React.FC = () => {
           <h2 className="text-xl font-bold text-slate-800">Master Data Barang</h2>
           <p className="text-sm text-slate-500">Kelola stok dan informasi inventaris gudang</p>
         </div>
-        <div className="flex items-center space-x-3 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
           <div className="relative flex-grow sm:flex-grow-0">
             <input 
               type="text" 
               placeholder="Cari SKU atau Nama..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none w-full"
+              className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none w-full sm:w-64"
             />
             <Search size={18} className="absolute left-3 top-2.5 text-slate-400" />
           </div>
-          <button 
-            onClick={openAddModal}
-            className="flex items-center space-x-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-medium shadow-sm"
-          >
-            <Plus size={18} />
-            <span className="hidden sm:inline">Tambah Barang</span>
-          </button>
+          
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleImportExcel} 
+            accept=".xlsx, .xls, .csv" 
+            className="hidden" 
+          />
+          
+          <div className="flex items-center space-x-2">
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center space-x-2 bg-emerald-50 text-emerald-700 border border-emerald-200 px-4 py-2 rounded-lg hover:bg-emerald-100 transition font-medium text-sm shadow-sm"
+              title="Import dari Excel"
+            >
+              <FileUp size={18} />
+              <span className="hidden lg:inline">Import Excel</span>
+            </button>
+            
+            <button 
+              onClick={downloadTemplate}
+              className="p-2 bg-slate-50 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-100 transition shadow-sm"
+              title="Download Template"
+            >
+              <Download size={18} />
+            </button>
+
+            <button 
+              onClick={openAddModal}
+              className="flex items-center space-x-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-medium text-sm shadow-lg shadow-indigo-100"
+            >
+              <Plus size={18} />
+              <span>Tambah Barang</span>
+            </button>
+          </div>
         </div>
       </div>
 

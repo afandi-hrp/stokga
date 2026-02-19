@@ -4,7 +4,7 @@ import { useStore } from '../store';
 import { 
   Lock, Save, Key, AlertCircle, CheckCircle2, 
   Palette, Type, Package, Image as ImageIcon, 
-  Download, Upload, Database, AlertTriangle, Cloud, AlignLeft, Layout
+  Download, Upload, Database, AlertTriangle, Cloud, AlignLeft, Layout, Copyright
 } from 'lucide-react';
 
 const Settings: React.FC = () => {
@@ -21,7 +21,8 @@ const Settings: React.FC = () => {
     primaryColor: branding.primaryColor,
     logo: branding.logo || '',
     description: branding.description || '',
-    footerText: branding.footerText || ''
+    footerText: branding.footerText || '',
+    copyrightText: branding.copyrightText || ''
   });
 
   const [message, setMessage] = useState<{ type: 'error' | 'success', text: string } | null>(null);
@@ -151,7 +152,7 @@ const Settings: React.FC = () => {
                 <AlignLeft size={14} className="mr-1.5" /> Deskripsi Login (Hero Text)
               </label>
               <textarea 
-                rows={3}
+                rows={2}
                 value={brandingForm.description}
                 onChange={e => setBrandingForm({...brandingForm, description: e.target.value})}
                 className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm resize-none"
@@ -159,17 +160,31 @@ const Settings: React.FC = () => {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center">
-                <Layout size={14} className="mr-1.5" /> Teks Footer
-              </label>
-              <input 
-                type="text"
-                value={brandingForm.footerText}
-                onChange={e => setBrandingForm({...brandingForm, footerText: e.target.value})}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
-                placeholder="e.g. Cloud Warehouse v1.1"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center">
+                  <Layout size={14} className="mr-1.5" /> Teks Footer
+                </label>
+                <input 
+                  type="text"
+                  value={brandingForm.footerText}
+                  onChange={e => setBrandingForm({...brandingForm, footerText: e.target.value})}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                  placeholder="e.g. Cloud Warehouse v1.1"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center">
+                  <Copyright size={14} className="mr-1.5" /> Copyright Login
+                </label>
+                <input 
+                  type="text"
+                  value={brandingForm.copyrightText}
+                  onChange={e => setBrandingForm({...brandingForm, copyrightText: e.target.value})}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                  placeholder="e.g. © 2026 Enterprise Resource"
+                />
+              </div>
             </div>
             
             <div>

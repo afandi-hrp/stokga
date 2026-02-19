@@ -14,6 +14,7 @@ interface Branding {
   logo?: string;
   description?: string;
   footerText?: string;
+  copyrightText?: string;
 }
 
 interface WarehouseStore {
@@ -45,7 +46,8 @@ const DEFAULT_BRANDING = {
   primaryColor: '#4f46e5', 
   logo: '',
   description: 'Sistem Manajemen Pergudangan Terpadu dengan Kontrol Inventaris Real-time.',
-  footerText: 'Cloud Warehouse v1.1'
+  footerText: 'Cloud Warehouse v1.1',
+  copyrightText: '© 2026 Enterprise Resource'
 };
 
 export const useStore = create<WarehouseStore>((set, get) => ({

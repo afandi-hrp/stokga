@@ -166,7 +166,7 @@ const App: React.FC = () => {
 
             <div className="mt-12 pt-8 border-t border-slate-100">
               <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold uppercase tracking-wider">
-                <span>© 2024 Enterprise Resource</span>
+                <span>{branding.copyrightText || '© 2026 Enterprise Resource'}</span>
                 <span className="flex items-center">
                   <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2 animate-pulse"></div>
                   System Online
@@ -227,7 +227,7 @@ const App: React.FC = () => {
       <footer className="bg-white border-t py-8">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <p className="text-slate-400 text-sm font-medium">
-            &copy; 2024 {branding.title}. {branding.footerText || 'Cloud Warehouse v1.1'}
+            &copy; {new Date().getFullYear()} {branding.title}. {branding.footerText || 'Cloud Warehouse v1.1'}
           </p>
         </div>
       </footer>

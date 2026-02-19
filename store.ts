@@ -3,7 +3,6 @@ import { create } from 'zustand';
 import { createClient } from '@supabase/supabase-js';
 import { Item, Location, User, AuthState } from './types';
 
-// Gunakan kredensial yang diberikan secara langsung untuk memastikan aplikasi berjalan
 const SUPABASE_URL = 'https://xdwrqaeotnokxygralcx.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkd3JxYWVvdG5va3h5Z3JhbGN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0Njg5NTIsImV4cCI6MjA4NzA0NDk1Mn0.Kae01Xe0F63KZEskh0tCGEi2fSZmdIwKWHCT8K60SBM';
 
@@ -52,7 +51,10 @@ interface WarehouseStore {
 export const useStore = create<WarehouseStore>((set, get) => ({
   items: [],
   locations: [],
-  users: [],
+  // DEFAULT USER: Menjamin anda selalu bisa login sebagai admin/admin
+  users: [
+    { id: 'default-admin', username: 'admin', password: 'admin', role: 'admin' }
+  ],
   auth: { user: null, token: null },
   branding: { title: 'SmartWarehouse Pro', primaryColor: '#4f46e5', logo: '' },
   isLoading: false,
@@ -67,10 +69,17 @@ export const useStore = create<WarehouseStore>((set, get) => ({
         supabase.from('settings').select('*').eq('id', 'branding').single()
       ]);
 
+      // Jika di database ada user, gabungkan dengan default admin. 
+      // Jika kosong, tetap gunakan default admin.
+      const dbUsers = (usersRes.data as any[]) || [];
+      const finalUsers = dbUsers.length > 0 
+        ? dbUsers 
+        : [{ id: 'default-admin', username: 'admin', password: 'admin', role: 'admin' }];
+
       set({
         items: (itemsRes.data as Item[]) || [],
         locations: (locsRes.data as Location[]) || [],
-        users: (usersRes.data as any[]) || [],
+        users: finalUsers,
         branding: brandingRes.data?.value || { title: 'SmartWarehouse Pro', primaryColor: '#4f46e5', logo: '' },
         isLoading: false
       });

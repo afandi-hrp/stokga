@@ -10,6 +10,7 @@ const App: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // Sinkronisasi data saat pertama kali buka
   useEffect(() => {
@@ -19,30 +20,40 @@ const App: React.FC = () => {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsLoggingIn(true);
 
-    const cleanUsername = username.trim();
-    const cleanPassword = password.trim();
+    // Memberikan sedikit delay agar UX terasa memproses
+    setTimeout(() => {
+      const cleanUsername = username.trim().toLowerCase();
+      const cleanPassword = password.trim();
 
-    const foundUser = users.find(u => 
-      u.username.toLowerCase() === cleanUsername.toLowerCase() && 
-      u.password === cleanPassword
-    );
+      // Debug: Konsol akan membantu jika ada masalah data
+      console.log("Mencoba login dengan:", cleanUsername);
+      console.log("Data user yang tersedia di memori:", users.map(u => u.username));
 
-    if (foundUser) {
-      const { password: _, ...userWithoutPassword } = foundUser;
-      login(userWithoutPassword as any);
-      setUsername('');
-      setPassword('');
-    } else {
-      setError('Kredensial tidak valid. Silakan periksa kembali.');
-    }
+      const foundUser = users.find(u => 
+        u.username.toLowerCase() === cleanUsername && 
+        u.password === cleanPassword
+      );
+
+      if (foundUser) {
+        const { password: _, ...userWithoutPassword } = foundUser;
+        login(userWithoutPassword as any);
+        setUsername('');
+        setPassword('');
+      } else {
+        setError('Kredensial tidak valid. Silakan periksa kembali.');
+      }
+      setIsLoggingIn(false);
+    }, 500);
   };
 
-  if (isLoading && !auth.user && users.length === 0) {
+  // Hanya tampilkan loader jika benar-benar baru pertama kali load data branding/inti
+  if (isLoading && users.length === 0 && !auth.user) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
         <Loader2 size={48} className="text-indigo-600 animate-spin mb-4" />
-        <p className="text-slate-500 font-medium tracking-wide">Mengautentikasi Sesi...</p>
+        <p className="text-slate-500 font-medium tracking-wide">Mempersiapkan Dashboard...</p>
       </div>
     );
   }
@@ -80,15 +91,15 @@ const App: React.FC = () => {
 
             <div className="relative z-10 space-y-6">
               <div className="flex items-center space-x-4">
-                <div className="w-1 h-1 bg-white/50 rounded-full"></div>
+                <div className="w-1.5 h-1.5 bg-white/50 rounded-full"></div>
                 <p className="text-sm font-medium text-white/70">Akurasi Stok 100%</p>
               </div>
               <div className="flex items-center space-x-4">
-                <div className="w-1 h-1 bg-white/50 rounded-full"></div>
+                <div className="w-1.5 h-1.5 bg-white/50 rounded-full"></div>
                 <p className="text-sm font-medium text-white/70">Multi-Gudang Terintegrasi</p>
               </div>
               <div className="flex items-center space-x-4">
-                <div className="w-1 h-1 bg-white/50 rounded-full"></div>
+                <div className="w-1.5 h-1.5 bg-white/50 rounded-full"></div>
                 <p className="text-sm font-medium text-white/70">Keamanan Cloud Terenkripsi</p>
               </div>
             </div>
@@ -122,8 +133,9 @@ const App: React.FC = () => {
                     onChange={(e) => setUsername(e.target.value)}
                     autoCapitalize="none"
                     autoCorrect="off"
-                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all pl-14 text-slate-800 placeholder:text-slate-400"
-                    placeholder="Contoh: admin_gudang"
+                    disabled={isLoggingIn}
+                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all pl-14 text-slate-800 placeholder:text-slate-400 disabled:opacity-50"
+                    placeholder="Contoh: admin"
                     required
                   />
                   <UserIcon size={20} className="absolute left-5 top-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
@@ -137,7 +149,8 @@ const App: React.FC = () => {
                     type="password" 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all pl-14 text-slate-800 placeholder:text-slate-400"
+                    disabled={isLoggingIn}
+                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all pl-14 text-slate-800 placeholder:text-slate-400 disabled:opacity-50"
                     placeholder="••••••••"
                     required
                   />
@@ -147,10 +160,18 @@ const App: React.FC = () => {
 
               <button 
                 type="submit" 
-                className="w-full text-white py-5 rounded-2xl font-bold transition-all shadow-[0_12px_24px_-8px_rgba(0,0,0,0.1)] hover:shadow-[0_12px_24px_-4px_rgba(0,0,0,0.2)] active:scale-[0.98] mt-4"
+                disabled={isLoggingIn}
+                className="w-full text-white py-5 rounded-2xl font-bold transition-all shadow-[0_12px_24px_-8px_rgba(0,0,0,0.1)] hover:shadow-[0_12px_24px_-4px_rgba(0,0,0,0.2)] active:scale-[0.98] mt-4 flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
                 style={{ backgroundColor: branding.primaryColor }}
               >
-                Masuk ke Dashboard
+                {isLoggingIn ? (
+                  <>
+                    <Loader2 size={20} className="animate-spin mr-2" />
+                    Memverifikasi...
+                  </>
+                ) : (
+                  'Masuk ke Dashboard'
+                )}
               </button>
             </form>
 

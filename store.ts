@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { createClient } from '@supabase/supabase-js';
 import { Item, Location, User, AuthState } from './types';
 
+// Pastikan kredensial ini sesuai dengan project Supabase Anda yang aktif
 const SUPABASE_URL = 'https://xdwrqaeotnokxygralcx.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkd3JxYWVvdG5va3h5Z3JhbGN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0Njg5NTIsImV4cCI6MjA4NzA0NDk1Mn0.Kae01Xe0F63KZEskh0tCGEi2fSZmdIwKWHCT8K60SBM';
 
@@ -21,7 +22,7 @@ interface WarehouseStore {
   auth: AuthState;
   branding: Branding;
   isLoading: boolean;
-  schemaError: boolean; // Flag baru untuk mendeteksi error schema cache
+  schemaError: boolean;
   
   fetchData: () => Promise<void>;
   login: (user: User) => void;
@@ -50,17 +51,19 @@ export const useStore = create<WarehouseStore>((set, get) => ({
   fetchData: async () => {
     set({ isLoading: true, schemaError: false });
     try {
-      // Mengambil data satu per satu agar error pada satu tabel tidak menghentikan yang lain
-      const itemsRes = await supabase.from('barang').select('*').order('sku', { ascending: true });
-      const locsRes = await supabase.from('lokasi').select('*').order('nama_lokasi');
-      const usersRes = await supabase.from('users').select('*');
-      const brandingRes = await supabase.from('settings').select('*').eq('id', 'branding').maybeSingle();
+      console.log("🔄 Mencoba mengambil data dari:", SUPABASE_URL);
+      
+      const [itemsRes, locsRes, usersRes, brandingRes] = await Promise.all([
+        supabase.from('barang').select('*').order('sku', { ascending: true }),
+        supabase.from('lokasi').select('*').order('nama_lokasi'),
+        supabase.from('users').select('*'),
+        supabase.from('settings').select('*').eq('id', 'branding').maybeSingle()
+      ]);
 
       if (locsRes.error) {
-        console.error("❌ ERROR LOKASI:", locsRes.error.message);
-        if (locsRes.error.message.includes('schema cache')) {
+        console.error("❌ ERROR LOKASI:", locsRes.error);
+        if (locsRes.error.message.includes('schema cache') || locsRes.error.code === 'PGRST103') {
           set({ schemaError: true });
-          console.warn("💡 TIPS: Supabase PostgREST belum sinkron. Jalankan NOTIFY pgrst, 'reload schema' di SQL Editor.");
         }
       }
 
@@ -77,7 +80,7 @@ export const useStore = create<WarehouseStore>((set, get) => ({
         isLoading: false
       });
     } catch (error) {
-      console.error("Critical Fetch Error:", error);
+      console.error("Critical Connection Error:", error);
       set({ isLoading: false });
     }
   },
@@ -108,10 +111,8 @@ export const useStore = create<WarehouseStore>((set, get) => ({
     if (error) {
       if (error.message.includes('schema cache')) {
         set({ schemaError: true });
-        alert("SISTEM ERROR: Supabase belum mendeteksi tabel 'lokasi'. Silakan jalankan script perbaikan di SQL Editor Supabase.");
-      } else {
-        alert("Gagal tambah lokasi: " + error.message);
       }
+      alert("Gagal tambah lokasi: " + error.message);
     } else {
       await get().fetchData();
     }

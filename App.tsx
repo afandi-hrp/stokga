@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from './store';
 import PublicView from './components/PublicView';
 import AdminView from './components/AdminView';
-import { Package, LogIn, LogOut, AlertCircle, ShieldCheck, User as UserIcon, Loader2 } from 'lucide-react';
+import { Package, LogIn, LogOut, AlertCircle, ShieldCheck, User as UserIcon, Loader2, Lock } from 'lucide-react';
 
 const App: React.FC = () => {
   const { auth, users, login, logout, branding, fetchData, isLoading } = useStore();
@@ -34,7 +34,7 @@ const App: React.FC = () => {
       setUsername('');
       setPassword('');
     } else {
-      setError('Username atau password salah!');
+      setError('Kredensial tidak valid. Silakan periksa kembali.');
     }
   };
 
@@ -42,7 +42,7 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
         <Loader2 size={48} className="text-indigo-600 animate-spin mb-4" />
-        <p className="text-slate-500 font-medium">Menghubungkan ke Database Supabase...</p>
+        <p className="text-slate-500 font-medium tracking-wide">Mengautentikasi Sesi...</p>
       </div>
     );
   }
@@ -50,93 +50,118 @@ const App: React.FC = () => {
   // If not logged in, show Login Screen
   if (!auth.user) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 bg-white rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-500">
-          {/* Brand/Illustration Side */}
+      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-6 sm:p-12">
+        <div className="max-w-5xl w-full grid grid-cols-1 md:grid-cols-12 bg-white rounded-[2.5rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] overflow-hidden animate-in fade-in zoom-in duration-700">
+          
+          {/* Visual/Brand Side - 5 Columns */}
           <div 
-            className="hidden md:flex flex-col justify-center items-center p-12 text-white text-center transition-colors duration-500"
+            className="hidden md:flex md:col-span-5 flex-col justify-between p-12 text-white relative overflow-hidden"
             style={{ backgroundColor: branding.primaryColor }}
           >
-            <div className="bg-white/20 p-6 rounded-3xl backdrop-blur-md mb-8 flex items-center justify-center min-w-[120px] min-h-[120px]">
-              {branding.logo ? (
-                <img src={branding.logo} alt="Logo" className="max-w-[80px] max-h-[80px] object-contain" />
-              ) : (
-                <Package size={64} className="text-white" />
-              )}
+            {/* Background Decorative Element */}
+            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-64 h-64 bg-black/10 rounded-full blur-3xl"></div>
+
+            <div className="relative z-10">
+              <div className="inline-flex items-center justify-center p-4 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 mb-8">
+                {branding.logo ? (
+                  <img src={branding.logo} alt="Logo" className="w-10 h-10 object-contain" />
+                ) : (
+                  <Package size={40} className="text-white" />
+                )}
+              </div>
+              <h1 className="text-4xl font-black leading-tight tracking-tight mb-4">
+                {branding.title}
+              </h1>
+              <p className="text-white/80 text-lg leading-relaxed max-w-xs">
+                Sistem Manajemen Pergudangan Terpadu dengan Kontrol Inventaris Real-time.
+              </p>
             </div>
-            <h1 className="text-3xl font-extrabold mb-4">{branding.title}</h1>
-            <p className="text-indigo-50 text-lg opacity-90">Manajemen inventaris modern, cepat, dan terorganisir untuk bisnis Anda.</p>
-            <div className="mt-12 space-y-4 text-sm text-white/70">
-              <p>✓ Sinkronisasi Cloud Supabase</p>
-              <p>✓ Multi-lokasi Warehouse</p>
-              <p>✓ Manajemen User Terpusat</p>
+
+            <div className="relative z-10 space-y-6">
+              <div className="flex items-center space-x-4">
+                <div className="w-1 h-1 bg-white/50 rounded-full"></div>
+                <p className="text-sm font-medium text-white/70">Akurasi Stok 100%</p>
+              </div>
+              <div className="flex items-center space-x-4">
+                <div className="w-1 h-1 bg-white/50 rounded-full"></div>
+                <p className="text-sm font-medium text-white/70">Multi-Gudang Terintegrasi</p>
+              </div>
+              <div className="flex items-center space-x-4">
+                <div className="w-1 h-1 bg-white/50 rounded-full"></div>
+                <p className="text-sm font-medium text-white/70">Keamanan Cloud Terenkripsi</p>
+              </div>
             </div>
           </div>
 
-          {/* Login Form Side */}
-          <div className="p-8 md:p-12 flex flex-col justify-center">
-            <div className="mb-8 text-center md:text-left">
-              <h2 className="text-2xl font-bold text-slate-800">Selamat Datang</h2>
-              <p className="text-slate-500">Silakan masuk untuk mengakses sistem</p>
+          {/* Login Form Side - 7 Columns */}
+          <div className="md:col-span-7 p-10 md:p-20 flex flex-col justify-center bg-white">
+            <div className="mb-10">
+              <div className="flex items-center space-x-2 text-indigo-600 font-bold text-xs uppercase tracking-widest mb-2">
+                <Lock size={12} />
+                <span>Gerbang Akses Aman</span>
+              </div>
+              <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Sign In</h2>
+              <p className="text-slate-500 mt-2">Masukkan identitas Anda untuk mengelola gudang</p>
             </div>
 
             {error && (
-              <div className="mb-6 p-4 bg-rose-50 text-rose-600 rounded-2xl flex items-center text-sm font-semibold border border-rose-100 animate-shake">
-                <AlertCircle size={20} className="mr-3" />
+              <div className="mb-8 p-4 bg-rose-50 text-rose-700 rounded-2xl flex items-center text-sm font-bold border border-rose-100 animate-in slide-in-from-top-2">
+                <AlertCircle size={18} className="mr-3 flex-shrink-0" />
                 {error}
               </div>
             )}
 
             <form onSubmit={handleLogin} className="space-y-6">
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Username</label>
-                <div className="relative">
+                <label className="block text-[13px] font-bold text-slate-700 mb-2.5 ml-1">Username</label>
+                <div className="relative group">
                   <input 
                     type="text" 
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     autoCapitalize="none"
                     autoCorrect="off"
-                    spellCheck="false"
-                    className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 outline-none transition-all pl-12"
-                    style={{ '--tw-ring-color': `${branding.primaryColor}1A` } as any}
-                    placeholder="Masukkan username..."
+                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all pl-14 text-slate-800 placeholder:text-slate-400"
+                    placeholder="Contoh: admin_gudang"
                     required
                   />
-                  <UserIcon size={18} className="absolute left-4 top-3.5 text-slate-400" />
+                  <UserIcon size={20} className="absolute left-5 top-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                 </div>
               </div>
+
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Password</label>
-                <div className="relative">
+                <label className="block text-[13px] font-bold text-slate-700 mb-2.5 ml-1">Password</label>
+                <div className="relative group">
                   <input 
                     type="password" 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 outline-none transition-all pl-12"
-                    style={{ '--tw-ring-color': `${branding.primaryColor}1A` } as any}
+                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all pl-14 text-slate-800 placeholder:text-slate-400"
                     placeholder="••••••••"
                     required
                   />
-                  <ShieldCheck size={18} className="absolute left-4 top-3.5 text-slate-400" />
+                  <ShieldCheck size={20} className="absolute left-5 top-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                 </div>
               </div>
+
               <button 
                 type="submit" 
-                className="w-full text-white py-4 rounded-2xl font-bold transition shadow-lg active:scale-[0.98]"
-                style={{ backgroundColor: branding.primaryColor, boxShadow: `0 10px 15px -3px ${branding.primaryColor}33` }}
+                className="w-full text-white py-5 rounded-2xl font-bold transition-all shadow-[0_12px_24px_-8px_rgba(0,0,0,0.1)] hover:shadow-[0_12px_24px_-4px_rgba(0,0,0,0.2)] active:scale-[0.98] mt-4"
+                style={{ backgroundColor: branding.primaryColor }}
               >
-                Sign In
+                Masuk ke Dashboard
               </button>
             </form>
 
-            <div className="mt-8 pt-8 border-t text-center">
-               <p className="text-xs text-slate-400 uppercase tracking-widest font-bold">Akses Sistem (Sync Cloud)</p>
-               <div className="mt-3 flex flex-wrap justify-center gap-2 text-[10px] text-slate-500">
-                  <span className="bg-slate-100 px-2 py-1 rounded">Pastikan Tabel Supabase Sudah Dibuat</span>
-               </div>
+            <div className="mt-12 pt-8 border-t border-slate-100">
+              <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold uppercase tracking-wider">
+                <span>© 2024 Enterprise Resource</span>
+                <span className="flex items-center">
+                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+                  System Online
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -194,7 +219,7 @@ const App: React.FC = () => {
       <footer className="bg-white border-t py-8">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <p className="text-slate-400 text-sm font-medium">
-            &copy; 2024 {branding.title}. Supabase Cloud Sync v1.1
+            &copy; 2024 {branding.title}. Cloud Warehouse v1.1
           </p>
         </div>
       </footer>

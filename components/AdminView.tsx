@@ -5,7 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { 
   LayoutGrid, List, Map, 
   TrendingUp, Package, MapPin, AlertCircle, CheckCircle,
-  Users, Settings as SettingsIcon, Database, HardDrive, Server
+  Users, Settings as SettingsIcon, Database, Server, Cloud
 } from 'lucide-react';
 import ItemManager from './ItemManager';
 import LocationManager from './LocationManager';
@@ -28,20 +28,20 @@ const AdminView: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-      {/* STATUS LOCAL DB */}
-      <div className="mb-6 bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* STATUS SUPABASE */}
+      <div className="mb-6 bg-indigo-50 border border-indigo-100 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center space-x-3">
-          <div className="bg-white p-2 rounded-full text-emerald-600 shadow-sm">
-            <HardDrive size={20} />
+          <div className="bg-white p-2 rounded-full text-indigo-600 shadow-sm">
+            <Cloud size={20} />
           </div>
           <div>
-            <p className="text-sm font-bold text-emerald-900">Database Lokal Aktif</p>
-            <p className="text-xs text-emerald-700">Data tersimpan aman di browser perangkat ini (IndexedDB).</p>
+            <p className="text-sm font-bold text-indigo-900">Connected to Supabase Self-Hosted</p>
+            <p className="text-xs text-indigo-700">Data disinkronisasi real-time dengan server Waruna Group.</p>
           </div>
         </div>
-        <div className="flex items-center space-x-2 text-[10px] font-black uppercase tracking-widest text-emerald-600 bg-white px-3 py-1.5 rounded-lg border border-emerald-100">
-          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-          <span>Offline Ready</span>
+        <div className="flex items-center space-x-2 text-[10px] font-black uppercase tracking-widest text-indigo-600 bg-white px-3 py-1.5 rounded-lg border border-indigo-100">
+          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          <span>Online</span>
         </div>
       </div>
 
@@ -113,21 +113,21 @@ const AdminView: React.FC = () => {
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-bold text-slate-800">Storage Info</h3>
-                <Database className="text-slate-300" size={20} />
+                <Server className="text-slate-300" size={20} />
               </div>
               <div className="space-y-4">
                 <div className="p-4 bg-slate-50 rounded-xl">
-                  <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Database Engine</p>
-                  <p className="text-sm font-bold text-slate-700">IndexedDB (Dexie.js)</p>
+                  <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Backend Engine</p>
+                  <p className="text-sm font-bold text-slate-700">Supabase Self-Hosted</p>
                 </div>
                 <div className="p-4 bg-slate-50 rounded-xl">
                   <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Status</p>
                   <p className="text-sm font-bold text-green-500 flex items-center">
-                    <CheckCircle size={14} className="mr-1" /> Active & Persistent
+                    <CheckCircle size={14} className="mr-1" /> Connected
                   </p>
                 </div>
                 <p className="text-[10px] text-slate-400 leading-relaxed italic">
-                  Data tersimpan secara lokal di perangkat Anda. Gunakan fitur Export Backup secara berkala untuk mengamankan data.
+                  Pastikan bucket 'barang-images' telah dibuat di Supabase Storage dan Policy diatur ke Public agar upload foto berfungsi.
                 </p>
               </div>
             </div>

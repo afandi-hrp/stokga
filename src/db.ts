@@ -12,7 +12,7 @@ export class WarehouseDB extends Dexie {
     super('SmartWarehouseDB');
     
     // Definisi tabel dan index (primary key & kolom yang sering dicari)
-    this.version(1).stores({
+    (this as any).version(1).stores({
       items: 'id, sku, nama_barang, lokasi_id',
       locations: 'id, kode_lokasi',
       users: 'id, username',

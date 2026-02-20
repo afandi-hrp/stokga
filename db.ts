@@ -1,5 +1,4 @@
-
-import Dexie, { Table } from 'dexie';
+import Dexie, { type Table } from 'dexie';
 import { Item, Location, User } from './types';
 
 // Definisi Schema Database Lokal
@@ -13,7 +12,7 @@ class WarehouseDB extends Dexie {
     super('SmartWarehouseDB');
     
     // Definisi tabel dan index (primary key & kolom yang sering dicari)
-    this.version(1).stores({
+    (this as any).version(1).stores({
       items: 'id, sku, nama_barang, lokasi_id',
       locations: 'id, kode_lokasi',
       users: 'id, username',

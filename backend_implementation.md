@@ -1,27 +1,28 @@
 
-# 🚀 Infrastruktur Database Baru: Local Storage (IndexedDB)
+# 🚀 Infrastruktur Backend: Supabase Self-Hosted
 
-Aplikasi ini telah dimigrasikan dari Supabase ke **Local-First Architecture** menggunakan **Dexie.js**.
+Aplikasi ini terhubung ke instance **Supabase Self-hosted** milik Waruna Group.
 
-## ✅ Keunggulan
-1. **Tidak Butuh API Key**: Error "No suitable key" hilang selamanya.
-2. **Offline Mode**: Bisa dipakai tanpa internet.
-3. **Data Persisten**: Data disimpan di browser (Chrome/Edge/Safari/Firefox).
+## 🔗 Koneksi
+- **URL**: `https://supabase.waruna-group.co.id`
+- **Auth**: Menggunakan Anon Key (JWT) untuk autentikasi client-side.
 
-## ⚠️ Catatan Penting
-- Data tersimpan di **Browser** masing-masing perangkat.
-- Data di Laptop A **tidak akan muncul** di Laptop B secara otomatis (karena tidak ada Cloud Sync).
-- Jika Anda melakukan **Clear Cache / Clear Site Data** pada browser, data akan hilang.
-- Gunakan fitur **Backup/Export JSON** di menu Settings secara rutin untuk mengamankan data.
+## 📦 Storage Setup (PENTING)
+Agar fitur upload foto barang berfungsi, Anda harus membuat Bucket di Supabase Storage:
 
-## Struktur Data (Schema)
-Database lokal (`SmartWarehouseDB`) memiliki tabel:
-- `items`: Data stok barang
-- `locations`: Data gudang/lokasi
-- `users`: Data login user
-- `settings`: Konfigurasi tampilan
+1. Masuk ke Dashboard Supabase.
+2. Buka menu **Storage**.
+3. Buat Bucket baru dengan nama: `barang-images`.
+4. Pastikan bucket tersebut **Public** (agar gambar bisa diakses via URL).
+5. **Policy (RLS)**:
+   - Buat policy agar *Authenticated* atau *Anon* users bisa melakukan `INSERT` (Upload) dan `SELECT` (View).
 
-## Login Default
-Saat pertama kali dijalankan, sistem akan membuat akun default:
-- **Username**: `admin`
-- **Password**: `admin`
+## 🗄️ Database Schema
+Tabel yang digunakan (PostgreSQL):
+- `barang`: Menyimpan data stok (kolom `poto_barang` berisi URL dari Storage).
+- `lokasi`: Menyimpan data master gudang.
+- `users`: Menyimpan data login pengguna aplikasi.
+- `settings`: Menyimpan konfigurasi branding aplikasi (JSON).
+
+## 📱 Fitur Kamera
+Aplikasi menggunakan HTML5 Media Capture (`capture="environment"`) untuk memicu kamera belakang secara langsung pada perangkat mobile saat tombol "Kamera" ditekan. Pastikan aplikasi diakses via HTTPS agar fitur ini berjalan optimal di semua browser.

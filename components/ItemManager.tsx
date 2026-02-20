@@ -1,16 +1,24 @@
 
 import React, { useState, useRef } from 'react';
 import { useStore } from '../store';
-import { Plus, Edit2, Trash2, Search, X, Save, Image as ImageIcon, RefreshCw, FileUp, Download } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, X, Save, Image as ImageIcon, RefreshCw, FileUp, Download, Camera, UploadCloud, Loader2 } from 'lucide-react';
 import { Item } from '../types';
 import * as XLSX from 'xlsx';
 
 const ItemManager: React.FC = () => {
-  const { items, locations, addItem, updateItem, deleteItem } = useStore();
+  const { items, locations, addItem, updateItem, deleteItem, uploadImage } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  
+  // Refs untuk input file
+  const excelInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
 
   const [formData, setFormData] = useState<Omit<Item, 'id'>>({
     sku: '',
@@ -44,18 +52,60 @@ const ItemManager: React.FC = () => {
       stok: item.stok,
       poto_barang: item.poto_barang || ''
     });
+    setPreviewUrl(item.poto_barang || '');
+    setSelectedFile(null);
     setIsModalOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingId) {
-      updateItem(editingId, formData);
-    } else {
-      addItem(formData);
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setSelectedFile(file);
+      // Buat preview lokal sebelum upload
+      const objectUrl = URL.createObjectURL(file);
+      setPreviewUrl(objectUrl);
     }
-    setIsModalOpen(false);
-    setEditingId(null);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsUploading(true);
+
+    try {
+      let finalImageUrl = formData.poto_barang;
+
+      // Jika ada file baru yang dipilih, upload dulu
+      if (selectedFile) {
+        const uploadedUrl = await uploadImage(selectedFile);
+        if (uploadedUrl) {
+          finalImageUrl = uploadedUrl;
+        } else {
+          setIsUploading(false);
+          return; // Stop jika gagal upload
+        }
+      }
+
+      const itemPayload = {
+        ...formData,
+        poto_barang: finalImageUrl
+      };
+
+      if (editingId) {
+        await updateItem(editingId, itemPayload);
+      } else {
+        await addItem(itemPayload);
+      }
+      
+      setIsModalOpen(false);
+      setEditingId(null);
+      setSelectedFile(null);
+      setPreviewUrl('');
+    } catch (error) {
+      console.error(error);
+      alert("Terjadi kesalahan saat menyimpan data.");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const openAddModal = () => {
@@ -68,6 +118,8 @@ const ItemManager: React.FC = () => {
       stok: 0, 
       poto_barang: '' 
     });
+    setPreviewUrl('');
+    setSelectedFile(null);
     setIsModalOpen(true);
   };
 
@@ -88,7 +140,6 @@ const ItemManager: React.FC = () => {
 
       let importCount = 0;
       data.forEach((row) => {
-        // Normalisasi header (mendukung variasi nama kolom)
         const sku = row.SKU || row['sku'] || row['Kode Barang'];
         const nama = row.Nama || row['nama_barang'] || row['Nama Barang'];
         const kategori = row.Kategori || row['kategori'] || 'Umum';
@@ -96,7 +147,6 @@ const ItemManager: React.FC = () => {
         const stok = parseInt(row.Stok || row['stok'] || row['Jumlah']) || 0;
 
         if (sku && nama) {
-          // Cari lokasi_id berdasarkan kode_lokasi di excel
           const locationMatch = locations.find(l => 
             l.kode_lokasi.toLowerCase() === String(kodeLokasi || '').toLowerCase()
           );
@@ -114,19 +164,9 @@ const ItemManager: React.FC = () => {
       });
 
       alert(`Berhasil mengimpor ${importCount} barang!`);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (excelInputRef.current) excelInputRef.current.value = '';
     };
     reader.readAsBinaryString(file);
-  };
-
-  const downloadTemplate = () => {
-    const template = [
-      { 'SKU': 'BRG-001', 'Nama Barang': 'Contoh Barang', 'Kategori': 'Elektronik', 'Kode Lokasi': locations[0]?.kode_lokasi || 'WH-A1', 'Stok': 10 }
-    ];
-    const ws = XLSX.utils.json_to_sheet(template);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Template");
-    XLSX.writeFile(wb, "Template_Import_Barang.xlsx");
   };
 
   return (
@@ -134,7 +174,7 @@ const ItemManager: React.FC = () => {
       <div className="p-6 border-b flex flex-wrap justify-between items-center gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-800">Master Data Barang</h2>
-          <p className="text-sm text-slate-500">Kelola stok dan informasi inventaris gudang</p>
+          <p className="text-sm text-slate-500">Database Server: Supabase Self-Hosted</p>
         </div>
         <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
           <div className="relative flex-grow sm:flex-grow-0">
@@ -150,7 +190,7 @@ const ItemManager: React.FC = () => {
           
           <input 
             type="file" 
-            ref={fileInputRef} 
+            ref={excelInputRef} 
             onChange={handleImportExcel} 
             accept=".xlsx, .xls, .csv" 
             className="hidden" 
@@ -158,7 +198,7 @@ const ItemManager: React.FC = () => {
           
           <div className="flex items-center space-x-2">
             <button 
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => excelInputRef.current?.click()}
               className="flex items-center space-x-2 bg-emerald-50 text-emerald-700 border border-emerald-200 px-4 py-2 rounded-lg hover:bg-emerald-100 transition font-medium text-sm shadow-sm"
               title="Import dari Excel"
             >
@@ -166,14 +206,6 @@ const ItemManager: React.FC = () => {
               <span className="hidden lg:inline">Import Excel</span>
             </button>
             
-            <button 
-              onClick={downloadTemplate}
-              className="p-2 bg-slate-50 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-100 transition shadow-sm"
-              title="Download Template"
-            >
-              <Download size={18} />
-            </button>
-
             <button 
               onClick={openAddModal}
               className="flex items-center space-x-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-medium text-sm shadow-lg shadow-indigo-100"
@@ -201,7 +233,7 @@ const ItemManager: React.FC = () => {
               <tr key={item.id} className="hover:bg-slate-50/80 transition group">
                 <td className="px-6 py-4">
                   <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 rounded-lg bg-slate-100 overflow-hidden border border-slate-200 flex items-center justify-center flex-shrink-0">
+                    <div className="w-12 h-12 rounded-lg bg-slate-100 overflow-hidden border border-slate-200 flex items-center justify-center flex-shrink-0 relative">
                       {item.poto_barang ? (
                         <img src={item.poto_barang} alt={item.nama_barang} className="w-full h-full object-cover" />
                       ) : (
@@ -260,7 +292,64 @@ const ItemManager: React.FC = () => {
                 <X size={24} />
               </button>
             </div>
+            
             <form onSubmit={handleSave} className="p-8 space-y-5">
+              
+              {/* Image Upload Section */}
+              <div className="flex flex-col items-center justify-center mb-6">
+                <div className="w-full h-48 bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden group">
+                  {previewUrl ? (
+                    <>
+                      <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                        <p className="text-white font-bold text-sm">Ganti Foto</p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center p-4">
+                      <ImageIcon className="mx-auto text-slate-300 mb-2" size={32} />
+                      <p className="text-xs text-slate-400 font-medium">Belum ada foto</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Hidden Inputs */}
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  capture="environment" // Forces rear camera on mobile
+                  ref={cameraInputRef} 
+                  onChange={handleFileSelect} 
+                  className="hidden" 
+                />
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  ref={galleryInputRef} 
+                  onChange={handleFileSelect} 
+                  className="hidden" 
+                />
+
+                <div className="flex space-x-3 mt-4 w-full">
+                  <button 
+                    type="button" 
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="flex-1 flex items-center justify-center space-x-2 bg-slate-800 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-slate-900 transition active:scale-95"
+                  >
+                    <Camera size={16} />
+                    <span>Kamera</span>
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => galleryInputRef.current?.click()}
+                    className="flex-1 flex items-center justify-center space-x-2 bg-slate-100 text-slate-700 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-200 transition active:scale-95 border border-slate-200"
+                  >
+                    <UploadCloud size={16} />
+                    <span>Galeri</span>
+                  </button>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 sm:col-span-1">
                   <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center justify-between">
@@ -313,23 +402,7 @@ const ItemManager: React.FC = () => {
                   placeholder="Elektronik, Furniture, dll"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">URL Foto Produk</label>
-                <div className="flex space-x-3">
-                  <input 
-                    type="url"
-                    value={formData.poto_barang}
-                    onChange={e => setFormData({...formData, poto_barang: e.target.value})}
-                    className="flex-grow px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
-                    placeholder="https://images.unsplash.com/..."
-                  />
-                  {formData.poto_barang && (
-                    <div className="w-12 h-10 rounded-lg overflow-hidden border shadow-sm">
-                      <img src={formData.poto_barang} alt="Preview" className="w-full h-full object-cover" />
-                    </div>
-                  )}
-                </div>
-              </div>
+              
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">Lokasi Penempatan</label>
                 <select 
@@ -344,10 +417,15 @@ const ItemManager: React.FC = () => {
                   ))}
                 </select>
               </div>
+
               <div className="pt-6 flex space-x-3">
-                <button type="submit" className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition flex items-center justify-center space-x-2 shadow-lg shadow-indigo-200">
-                  <Save size={18} />
-                  <span>{editingId ? 'Update Barang' : 'Tambah Ke Inventaris'}</span>
+                <button 
+                  type="submit" 
+                  disabled={isUploading}
+                  className={`flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition flex items-center justify-center space-x-2 shadow-lg shadow-indigo-200 ${isUploading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                >
+                  {isUploading ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                  <span>{isUploading ? 'Mengupload...' : (editingId ? 'Update Barang' : 'Simpan Barang')}</span>
                 </button>
                 <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold hover:bg-slate-200 transition">
                   Batal

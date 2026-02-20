@@ -1,5 +1,7 @@
 {
   "name": "SmartWarehouse - WMS Pro",
   "description": "A comprehensive Warehouse Management System featuring a high-performance admin dashboard for inventory control and a fast, filterable public interface for item searching.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "camera"
+  ]
 }

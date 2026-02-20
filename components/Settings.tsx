@@ -2,9 +2,8 @@
 import React, { useState, useRef } from 'react';
 import { useStore } from '../store';
 import { 
-  Lock, Save, Key, AlertCircle, CheckCircle2, 
-  Palette, Type, Package, Image as ImageIcon, 
-  Download, Upload, Database, AlertTriangle, Cloud, AlignLeft, Layout, Copyright
+  Key, Palette, Type, Image as ImageIcon, 
+  Download, HardDrive, Layout, Copyright, AlignLeft
 } from 'lucide-react';
 
 const Settings: React.FC = () => {
@@ -71,14 +70,14 @@ const Settings: React.FC = () => {
       locations,
       branding,
       exportDate: new Date().toISOString(),
-      version: "1.1-cloud"
+      version: "2.0-local"
     };
     
     const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `backup_cloud_wms_${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `backup_warehouse_db_${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -91,12 +90,13 @@ const Settings: React.FC = () => {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
-      <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 flex items-start space-x-3 shadow-sm">
-        <Cloud className="text-indigo-600 flex-shrink-0 mt-0.5" size={20} />
+      <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-start space-x-3 shadow-sm">
+        <HardDrive className="text-emerald-600 flex-shrink-0 mt-0.5" size={20} />
         <div>
-          <p className="text-sm font-bold text-indigo-800">Penyimpanan Cloud Aktif</p>
-          <p className="text-xs text-indigo-700 leading-relaxed">
-            Data Anda disinkronkan secara aman dengan <b>Supabase PostgreSQL</b>. Perubahan di satu perangkat akan langsung terlihat di perangkat lain.
+          <p className="text-sm font-bold text-emerald-800">Penyimpanan Lokal (Browser) Aktif</p>
+          <p className="text-xs text-emerald-700 leading-relaxed">
+            Data tersimpan di <b>IndexedDB</b> browser ini. Tidak ada data yang dikirim ke server luar.
+            Pastikan Anda melakukan <b>Backup Data</b> sebelum menghapus cache browser.
           </p>
         </div>
       </div>
@@ -170,7 +170,7 @@ const Settings: React.FC = () => {
                   value={brandingForm.footerText}
                   onChange={e => setBrandingForm({...brandingForm, footerText: e.target.value})}
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
-                  placeholder="e.g. Cloud Warehouse v1.1"
+                  placeholder="e.g. Local Warehouse v2.0"
                 />
               </div>
               <div>

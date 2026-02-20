@@ -72,6 +72,8 @@ export const useStore = create<WarehouseStore>((set, get) => ({
   fetchData: async () => {
     set({ isLoading: true });
     try {
+      console.log("Fetching data from Supabase...");
+      
       const [itemsRes, locsRes, usersRes, brandingRes] = await Promise.all([
         supabase.from('barang').select('*').order('created_at', { ascending: false }),
         supabase.from('lokasi').select('*').order('nama_lokasi'),
@@ -80,6 +82,11 @@ export const useStore = create<WarehouseStore>((set, get) => ({
       ]);
 
       if (itemsRes.error) console.error("Error fetching items:", itemsRes.error);
+      if (locsRes.error) console.error("Error fetching locations:", locsRes.error);
+      if (usersRes.error) console.error("Error fetching users:", usersRes.error);
+
+      // Log jumlah user yang berhasil di-load untuk debug
+      if (usersRes.data) console.log(`Loaded ${usersRes.data.length} users from DB.`);
 
       set({
         items: (itemsRes.data as Item[]) || [],
@@ -89,7 +96,7 @@ export const useStore = create<WarehouseStore>((set, get) => ({
         isLoading: false
       });
     } catch (error) {
-      console.error("Critical Connection Error:", error);
+      console.error("Critical Connection Error during fetchData:", error);
       set({ isLoading: false });
     }
   },

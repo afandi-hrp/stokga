@@ -4,6 +4,7 @@ import { useStore, supabase } from './store'; // Import supabase langsung
 import PublicView from './components/PublicView';
 import AdminView from './components/AdminView';
 import { Package, LogOut, AlertCircle, ShieldCheck, User as UserIcon, Loader2, Lock } from 'lucide-react';
+import { User } from './types';
 
 const App: React.FC = () => {
   const { auth, login, logout, branding, fetchData, isLoading } = useStore();
@@ -25,41 +26,72 @@ const App: React.FC = () => {
       const cleanUsername = username.trim();
       const cleanPassword = password.trim();
 
-      // LOGIKA LOGIN BARU: Cek langsung ke database Supabase
-      // Ini mengatasi masalah jika array 'users' di local state belum termuat
-      const { data: user, error: dbError } = await supabase
+      // --- METODE 1: CEK STATE LOKAL (Tercepat & Paling Stabil) ---
+      // Kita cek apakah user sudah ada di data yang di-fetch saat awal buka aplikasi
+      const localUsers = useStore.getState().users;
+      const foundInLocal = localUsers.find(u => 
+        u.username.toLowerCase() === cleanUsername.toLowerCase()
+      );
+
+      if (foundInLocal) {
+        // Jika user ditemukan di lokal, validasi password
+        if (foundInLocal.password === cleanPassword) {
+          console.log("Login successful via Local State");
+          const { password: _, ...userWithoutPassword } = foundInLocal;
+          login(userWithoutPassword as User);
+          // Refresh data setelah login sukses
+          await fetchData();
+          resetForm();
+          return; // Selesai
+        } else {
+          // Jika username ketemu tapi password salah di lokal, kita tetap coba ke server
+          // siapa tahu password baru saja diubah di device lain.
+          console.log("Password mismatch locally, trying server...");
+        }
+      }
+
+      // --- METODE 2: CEK DATABASE SERVER (Fallback / Double Check) ---
+      // Gunakan ini jika user tidak ada di lokal (misal baru dibuat) atau password beda
+      const { data: dbUser, error: dbError } = await supabase
         .from('users')
         .select('*')
-        .ilike('username', cleanUsername) // Case-insensitive username check
-        .single();
+        .ilike('username', cleanUsername)
+        .maybeSingle(); // Gunakan maybeSingle agar tidak error jika user tidak ditemukan
 
-      if (dbError || !user) {
-        throw new Error('User tidak ditemukan.');
+      if (dbError) {
+        console.error("Database Connection Error:", dbError);
+        throw new Error("Gangguan koneksi database.");
       }
 
-      // Verifikasi Password (Plain text sesuai database saat ini)
-      if (user.password === cleanPassword) {
-        // Login Berhasil
-        const { password: _, ...userWithoutPassword } = user;
+      if (!dbUser) {
+        throw new Error("Username tidak terdaftar.");
+      }
+
+      // Verifikasi Password Database
+      if (dbUser.password === cleanPassword) {
+        console.log("Login successful via Database Query");
+        const { password: _, ...userWithoutPassword } = dbUser;
         
-        // Update state auth global
-        login(userWithoutPassword as any);
-        
-        // Reset form
-        setUsername('');
-        setPassword('');
-        
-        // Refresh data agar dashboard terupdate
+        login(userWithoutPassword as User);
         await fetchData();
+        resetForm();
       } else {
-        throw new Error('Password salah.');
+        throw new Error("Password yang Anda masukkan salah.");
       }
+
     } catch (err: any) {
-      console.error("Login Error:", err);
-      setError('Kredensial tidak valid. Silakan periksa username atau password.');
+      console.error("Login Failed:", err);
+      // Tampilkan pesan error yang spesifik jika ada, atau default
+      setError(err.message || 'Kredensial tidak valid. Silakan periksa username atau password.');
     } finally {
       setIsLoggingIn(false);
     }
+  };
+
+  const resetForm = () => {
+    setUsername('');
+    setPassword('');
+    setIsLoggingIn(false);
   };
 
   // Tampilkan loader hanya jika auth loading
@@ -67,7 +99,7 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
         <Loader2 size={48} className="text-indigo-600 animate-spin mb-4" />
-        <p className="text-slate-500 font-medium tracking-wide">Menghubungkan ke Server...</p>
+        <p className="text-slate-500 font-medium tracking-wide">Menghubungkan ke Server Waruna...</p>
       </div>
     );
   }

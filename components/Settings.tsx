@@ -2,8 +2,9 @@
 import React, { useState, useRef } from 'react';
 import { useStore } from '../store';
 import { 
-  Key, Palette, Type, Image as ImageIcon, 
-  Download, Cloud, Layout, Copyright, AlignLeft
+  Lock, Save, Key, AlertCircle, CheckCircle2, 
+  Palette, Type, Package, Image as ImageIcon, 
+  Download, Upload, Database, AlertTriangle, Cloud, AlignLeft, Layout, Copyright
 } from 'lucide-react';
 
 const Settings: React.FC = () => {
@@ -35,8 +36,6 @@ const Settings: React.FC = () => {
 
     const currentUser = users.find(u => u.username === auth.user?.username);
 
-    // Note: In real supabase auth, password check is handled by server. 
-    // Here we simulate or use simple update if using custom table.
     if (!currentUser || currentUser.password !== passData.current) {
       setMessage({ type: 'error', text: 'Password saat ini tidak benar!' });
       return;
@@ -72,14 +71,14 @@ const Settings: React.FC = () => {
       locations,
       branding,
       exportDate: new Date().toISOString(),
-      version: "3.0-cloud"
+      version: "1.1-cloud"
     };
     
     const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `warehouse_data_dump_${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `backup_cloud_wms_${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -95,9 +94,9 @@ const Settings: React.FC = () => {
       <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 flex items-start space-x-3 shadow-sm">
         <Cloud className="text-indigo-600 flex-shrink-0 mt-0.5" size={20} />
         <div>
-          <p className="text-sm font-bold text-indigo-800">Mode Cloud Server Aktif</p>
+          <p className="text-sm font-bold text-indigo-800">Penyimpanan Cloud Aktif</p>
           <p className="text-xs text-indigo-700 leading-relaxed">
-            Semua perubahan data disinkronisasi langsung dengan Supabase. Foto barang tersimpan di Cloud Storage.
+            Data Anda disinkronkan secara aman dengan <b>Supabase PostgreSQL</b>. Perubahan di satu perangkat akan langsung terlihat di perangkat lain.
           </p>
         </div>
       </div>
@@ -171,7 +170,7 @@ const Settings: React.FC = () => {
                   value={brandingForm.footerText}
                   onChange={e => setBrandingForm({...brandingForm, footerText: e.target.value})}
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
-                  placeholder="e.g. Local Warehouse v2.0"
+                  placeholder="e.g. Cloud Warehouse v1.1"
                 />
               </div>
               <div>
@@ -273,8 +272,8 @@ const Settings: React.FC = () => {
               <Download size={24} />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-slate-800">Backup Data Lokal</h3>
-              <p className="text-sm text-slate-500">Unduh data saat ini ke dalam format JSON (Backup)</p>
+              <h3 className="text-xl font-bold text-slate-800">Backup Data Utama</h3>
+              <p className="text-sm text-slate-500">Unduh snapshot data barang & lokasi untuk arsip offline</p>
             </div>
           </div>
           <button 
@@ -282,7 +281,7 @@ const Settings: React.FC = () => {
             className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-slate-800 text-white px-8 py-4 rounded-xl font-bold hover:bg-slate-900 transition shadow-lg active:scale-95"
           >
             <Download size={18} />
-            <span>Export .JSON</span>
+            <span>Export Snapshot .JSON</span>
           </button>
         </div>
       </div>

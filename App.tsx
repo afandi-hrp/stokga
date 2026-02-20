@@ -1,13 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
-import { useStore, supabase } from './store'; // Import supabase langsung
+import { useStore } from './store';
 import PublicView from './components/PublicView';
 import AdminView from './components/AdminView';
-import { Package, LogOut, AlertCircle, ShieldCheck, User as UserIcon, Loader2, Lock } from 'lucide-react';
-import { User } from './types';
+import { Package, LogIn, LogOut, AlertCircle, ShieldCheck, User as UserIcon, Loader2, Lock } from 'lucide-react';
 
 const App: React.FC = () => {
-  const { auth, login, logout, branding, fetchData, isLoading } = useStore();
+  const { auth, users, login, logout, branding, fetchData, isLoading } = useStore();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -17,89 +16,37 @@ const App: React.FC = () => {
     fetchData();
   }, []);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoggingIn(true);
 
-    try {
-      const cleanUsername = username.trim();
+    setTimeout(() => {
+      const cleanUsername = username.trim().toLowerCase();
       const cleanPassword = password.trim();
 
-      // --- METODE 1: CEK STATE LOKAL (Tercepat & Paling Stabil) ---
-      // Kita cek apakah user sudah ada di data yang di-fetch saat awal buka aplikasi
-      const localUsers = useStore.getState().users;
-      const foundInLocal = localUsers.find(u => 
-        u.username.toLowerCase() === cleanUsername.toLowerCase()
+      const foundUser = users.find(u => 
+        u.username.toLowerCase() === cleanUsername && 
+        u.password === cleanPassword
       );
 
-      if (foundInLocal) {
-        // Jika user ditemukan di lokal, validasi password
-        if (foundInLocal.password === cleanPassword) {
-          console.log("Login successful via Local State");
-          const { password: _, ...userWithoutPassword } = foundInLocal;
-          login(userWithoutPassword as User);
-          // Refresh data setelah login sukses
-          await fetchData();
-          resetForm();
-          return; // Selesai
-        } else {
-          // Jika username ketemu tapi password salah di lokal, kita tetap coba ke server
-          // siapa tahu password baru saja diubah di device lain.
-          console.log("Password mismatch locally, trying server...");
-        }
-      }
-
-      // --- METODE 2: CEK DATABASE SERVER (Fallback / Double Check) ---
-      // Gunakan ini jika user tidak ada di lokal (misal baru dibuat) atau password beda
-      const { data: dbUser, error: dbError } = await supabase
-        .from('users')
-        .select('*')
-        .ilike('username', cleanUsername)
-        .maybeSingle(); // Gunakan maybeSingle agar tidak error jika user tidak ditemukan
-
-      if (dbError) {
-        console.error("Database Connection Error:", dbError);
-        throw new Error("Gangguan koneksi database.");
-      }
-
-      if (!dbUser) {
-        throw new Error("Username tidak terdaftar.");
-      }
-
-      // Verifikasi Password Database
-      if (dbUser.password === cleanPassword) {
-        console.log("Login successful via Database Query");
-        const { password: _, ...userWithoutPassword } = dbUser;
-        
-        login(userWithoutPassword as User);
-        await fetchData();
-        resetForm();
+      if (foundUser) {
+        const { password: _, ...userWithoutPassword } = foundUser;
+        login(userWithoutPassword as any);
+        setUsername('');
+        setPassword('');
       } else {
-        throw new Error("Password yang Anda masukkan salah.");
+        setError('Kredensial tidak valid. Silakan periksa kembali.');
       }
-
-    } catch (err: any) {
-      console.error("Login Failed:", err);
-      // Tampilkan pesan error yang spesifik jika ada, atau default
-      setError(err.message || 'Kredensial tidak valid. Silakan periksa username atau password.');
-    } finally {
       setIsLoggingIn(false);
-    }
+    }, 500);
   };
 
-  const resetForm = () => {
-    setUsername('');
-    setPassword('');
-    setIsLoggingIn(false);
-  };
-
-  // Tampilkan loader hanya jika auth loading
-  if (isLoading && !auth.user) {
+  if (isLoading && users.length === 0 && !auth.user) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
         <Loader2 size={48} className="text-indigo-600 animate-spin mb-4" />
-        <p className="text-slate-500 font-medium tracking-wide">Menghubungkan ke Server Waruna...</p>
+        <p className="text-slate-500 font-medium tracking-wide">Mempersiapkan Dashboard...</p>
       </div>
     );
   }
@@ -135,15 +82,15 @@ const App: React.FC = () => {
             <div className="relative z-10 space-y-6">
               <div className="flex items-center space-x-4">
                 <div className="w-1.5 h-1.5 bg-white/50 rounded-full"></div>
-                <p className="text-sm font-medium text-white/70">Mode Database Cloud</p>
+                <p className="text-sm font-medium text-white/70">Akurasi Stok 100%</p>
               </div>
               <div className="flex items-center space-x-4">
                 <div className="w-1.5 h-1.5 bg-white/50 rounded-full"></div>
-                <p className="text-sm font-medium text-white/70">Sinkronisasi Real-time</p>
+                <p className="text-sm font-medium text-white/70">Multi-Gudang Terintegrasi</p>
               </div>
               <div className="flex items-center space-x-4">
                 <div className="w-1.5 h-1.5 bg-white/50 rounded-full"></div>
-                <p className="text-sm font-medium text-white/70">Akses Terpusat</p>
+                <p className="text-sm font-medium text-white/70">Keamanan Cloud Terenkripsi</p>
               </div>
             </div>
           </div>
@@ -280,7 +227,7 @@ const App: React.FC = () => {
       <footer className="bg-white border-t py-8">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <p className="text-slate-400 text-sm font-medium">
-            &copy; {new Date().getFullYear()} {branding.title}. {branding.footerText || 'Cloud Warehouse v3.0'}
+            &copy; {new Date().getFullYear()} {branding.title}. {branding.footerText || 'Cloud Warehouse v1.1'}
           </p>
         </div>
       </footer>

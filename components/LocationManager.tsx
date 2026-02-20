@@ -1,11 +1,11 @@
 
 import React, { useState } from 'react';
 import { useStore } from '../store';
-import { Plus, Edit2, Trash2, MapPin, X, Save, RefreshCw, Search, HardDrive } from 'lucide-react';
+import { Plus, Edit2, Trash2, MapPin, X, Save, RefreshCw, Search, AlertTriangle, Terminal, Database } from 'lucide-react';
 import { Location } from '../types';
 
 const LocationManager: React.FC = () => {
-  const { locations, addLocation, updateLocation, deleteLocation, fetchData, isLoading } = useStore();
+  const { locations, addLocation, updateLocation, deleteLocation, fetchData, isLoading, schemaError } = useStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -77,10 +77,58 @@ const LocationManager: React.FC = () => {
         </div>
       </div>
 
+      {/* SCHEMA CACHE ALERT - PERBAIKAN TOTAL */}
+      {schemaError && (
+        <div className="m-6 p-6 bg-rose-50 border-2 border-rose-200 rounded-2xl">
+          <div className="flex items-start space-x-4">
+            <div className="bg-rose-500 p-2 rounded-lg text-white animate-pulse">
+              <AlertTriangle size={24} />
+            </div>
+            <div className="flex-grow">
+              <h3 className="text-lg font-bold text-rose-900">Database Masih Terkunci</h3>
+              <p className="text-sm text-rose-700 mb-4">
+                Supabase menolak akses ke tabel 'lokasi'. Ini biasanya terjadi jika tabel dibuat tanpa izin akses eksplisit.
+              </p>
+              
+              <div className="space-y-4">
+                <div className="bg-slate-900 text-slate-300 p-4 rounded-xl font-mono text-xs overflow-x-auto relative group">
+                  <div className="flex items-center space-x-2 text-rose-400 mb-2">
+                    <Terminal size={14} />
+                    <span>Langkah Perbaikan (Jalankan di SQL Editor Supabase):</span>
+                  </div>
+                  <p className="text-white font-bold">-- Langkah 1: Berikan Izin Role Anon</p>
+                  <p>GRANT ALL ON ALL TABLES IN SCHEMA public TO anon;</p>
+                  <p>GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon;</p>
+                  <p className="text-white font-bold mt-2">-- Langkah 2: Paksa Reload API</p>
+                  <p>NOTIFY pgrst, 'reload schema';</p>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <button 
+                    onClick={() => fetchData()}
+                    className="bg-rose-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-rose-700 transition shadow-lg flex items-center space-x-2"
+                  >
+                    <RefreshCw size={18} className={isLoading ? "animate-spin" : ""} />
+                    <span>Cek Koneksi Lagi</span>
+                  </button>
+                  <a 
+                    href="https://supabase.com/dashboard/project/xdwrqaeotnokxygralcx/sql/new" 
+                    target="_blank"
+                    className="text-xs font-bold text-slate-500 hover:text-indigo-600 underline flex items-center"
+                  >
+                    <Database size={14} className="mr-1" /> Buka SQL Editor Supabase &rarr;
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isLoading && locations.length === 0 ? (
         <div className="p-20 flex flex-col items-center justify-center text-slate-400">
           <RefreshCw size={48} className="animate-spin mb-4 opacity-20" />
-          <p className="font-medium">Memuat Database...</p>
+          <p className="font-medium">Sinkronisasi Database...</p>
         </div>
       ) : filteredLocations.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
@@ -114,11 +162,11 @@ const LocationManager: React.FC = () => {
       ) : (
         <div className="p-20 text-center">
           <div className="bg-slate-50 inline-flex p-8 rounded-full mb-4">
-            <HardDrive size={48} className="text-slate-200" />
+            <MapPin size={48} className="text-slate-200" />
           </div>
           <h3 className="text-xl font-bold text-slate-400">Data Lokasi Kosong</h3>
           <p className="text-slate-300 mt-2 max-w-xs mx-auto">
-            Belum ada data lokasi tersimpan di database browser ini.
+            Gagal menarik data dari tabel 'lokasi'. Jalankan skrip di SQL Editor jika ini pertama kali Anda menggunakan aplikasi.
           </p>
           <button 
             onClick={() => { setEditingId(null); setIsModalOpen(true); }}

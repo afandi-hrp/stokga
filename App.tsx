@@ -3,10 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from './store';
 import PublicView from './components/PublicView';
 import AdminView from './components/AdminView';
-import { Package, LogIn, LogOut, AlertCircle, ShieldCheck, User as UserIcon, Loader2, Lock } from 'lucide-react';
+import { Package, LogIn, LogOut, AlertCircle, ShieldCheck, User as UserIcon, Loader2, Lock, Database, RefreshCw } from 'lucide-react';
 
 const App: React.FC = () => {
-  const { auth, users, login, logout, branding, fetchData, isLoading } = useStore();
+  const { auth, users, login, logout, branding, fetchData, isLoading, dbStatus, schemaError } = useStore();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -21,9 +21,13 @@ const App: React.FC = () => {
     setError('');
     setIsLoggingIn(true);
 
+    // Memberikan delay sedikit untuk UX feel
     setTimeout(() => {
       const cleanUsername = username.trim().toLowerCase();
       const cleanPassword = password.trim();
+
+      console.log("DEBUG: Attempting login with", cleanUsername);
+      console.log("DEBUG: Registered users in memory:", users.map(u => u.username));
 
       const foundUser = users.find(u => 
         u.username.toLowerCase() === cleanUsername && 
@@ -36,17 +40,24 @@ const App: React.FC = () => {
         setUsername('');
         setPassword('');
       } else {
-        setError('Kredensial tidak valid. Silakan periksa kembali.');
+        // Deteksi jenis error
+        if (dbStatus === 'error' || schemaError) {
+          setError('Koneksi database bermasalah. Menggunakan mode darurat: Coba user "admin" password "admin".');
+        } else if (dbStatus === 'empty') {
+          setError('Database kosong. Jalankan skrip SQL di Supabase atau gunakan user "admin" password "admin".');
+        } else {
+          setError('Username atau Password salah. Periksa kembali penulisan Anda.');
+        }
       }
       setIsLoggingIn(false);
-    }, 500);
+    }, 600);
   };
 
   if (isLoading && users.length === 0 && !auth.user) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
         <Loader2 size={48} className="text-indigo-600 animate-spin mb-4" />
-        <p className="text-slate-500 font-medium tracking-wide">Mempersiapkan Dashboard...</p>
+        <p className="text-slate-500 font-medium tracking-wide animate-pulse">Menghubungkan ke Cloud Database...</p>
       </div>
     );
   }
@@ -79,19 +90,12 @@ const App: React.FC = () => {
               </p>
             </div>
 
-            <div className="relative z-10 space-y-6">
-              <div className="flex items-center space-x-4">
-                <div className="w-1.5 h-1.5 bg-white/50 rounded-full"></div>
-                <p className="text-sm font-medium text-white/70">Akurasi Stok 100%</p>
+            <div className="relative z-10 space-y-4">
+              <div className={`inline-flex items-center space-x-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${dbStatus === 'connected' ? 'bg-green-500/20 text-green-100' : 'bg-rose-500/20 text-rose-100'}`}>
+                <Database size={12} />
+                <span>DB: {dbStatus === 'connected' ? 'Connected' : 'Offline / Error'}</span>
               </div>
-              <div className="flex items-center space-x-4">
-                <div className="w-1.5 h-1.5 bg-white/50 rounded-full"></div>
-                <p className="text-sm font-medium text-white/70">Multi-Gudang Terintegrasi</p>
-              </div>
-              <div className="flex items-center space-x-4">
-                <div className="w-1.5 h-1.5 bg-white/50 rounded-full"></div>
-                <p className="text-sm font-medium text-white/70">Keamanan Cloud Terenkripsi</p>
-              </div>
+              <p className="text-xs text-white/50 italic">Version Cloud Stable 1.1.2</p>
             </div>
           </div>
 
@@ -106,9 +110,19 @@ const App: React.FC = () => {
             </div>
 
             {error && (
-              <div className="mb-8 p-4 bg-rose-50 text-rose-700 rounded-2xl flex items-center text-sm font-bold border border-rose-100 animate-in slide-in-from-top-2">
-                <AlertCircle size={18} className="mr-3 flex-shrink-0" />
-                {error}
+              <div className="mb-8 p-4 bg-rose-50 text-rose-700 rounded-2xl flex items-start text-sm font-bold border border-rose-100 animate-in slide-in-from-top-2">
+                <AlertCircle size={18} className="mr-3 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p>{error}</p>
+                  {dbStatus !== 'connected' && (
+                    <button 
+                      onClick={() => fetchData()} 
+                      className="mt-2 text-xs flex items-center text-rose-600 hover:underline"
+                    >
+                      <RefreshCw size={10} className="mr-1" /> Coba hubungkan ulang database
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
@@ -168,8 +182,8 @@ const App: React.FC = () => {
               <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold uppercase tracking-wider">
                 <span>{branding.copyrightText || '© 2026 Enterprise Resource'}</span>
                 <span className="flex items-center">
-                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-                  System Online
+                  <div className={`w-1.5 h-1.5 rounded-full mr-2 ${dbStatus === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-slate-300'}`}></div>
+                  System {dbStatus === 'connected' ? 'Online' : 'Offline Mode'}
                 </span>
               </div>
             </div>

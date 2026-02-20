@@ -25,6 +25,7 @@ interface WarehouseStore {
   branding: Branding;
   isLoading: boolean;
   schemaError: boolean;
+  dbStatus: 'connected' | 'error' | 'empty';
   
   fetchData: () => Promise<void>;
   login: (user: User) => void;
@@ -41,6 +42,8 @@ interface WarehouseStore {
   updateBranding: (branding: Partial<Branding>) => Promise<void>;
 }
 
+const DEFAULT_ADMIN = { id: 'default-admin', username: 'admin', password: 'admin', role: 'admin' as const };
+
 const DEFAULT_BRANDING = { 
   title: 'SmartWarehouse Pro', 
   primaryColor: '#4f46e5', 
@@ -53,11 +56,12 @@ const DEFAULT_BRANDING = {
 export const useStore = create<WarehouseStore>((set, get) => ({
   items: [],
   locations: [],
-  users: [{ id: 'default-admin', username: 'admin', password: 'admin', role: 'admin' }],
+  users: [DEFAULT_ADMIN],
   auth: { user: null, token: null },
   branding: DEFAULT_BRANDING,
   isLoading: false,
   schemaError: false,
+  dbStatus: 'connected',
 
   fetchData: async () => {
     set({ isLoading: true, schemaError: false });
@@ -69,27 +73,37 @@ export const useStore = create<WarehouseStore>((set, get) => ({
         supabase.from('settings').select('*').eq('id', 'branding').maybeSingle()
       ]);
 
-      if (locsRes.error) {
-        if (locsRes.error.message.includes('schema cache') || locsRes.error.code === 'PGRST103') {
+      // Detect Schema Cache Errors
+      if (locsRes.error || itemsRes.error || usersRes.error) {
+        const err = locsRes.error || itemsRes.error || usersRes.error;
+        console.error("Supabase Query Error:", err);
+        if (err?.message.includes('schema cache') || err?.code === 'PGRST103') {
           set({ schemaError: true });
         }
+        set({ dbStatus: 'error' });
       }
 
       const dbUsers = (usersRes.data as any[]) || [];
-      const finalUsers = dbUsers.length > 0 
-        ? dbUsers 
-        : [{ id: 'default-admin', username: 'admin', password: 'admin', role: 'admin' }];
+      
+      // If DB is connected but users table is empty, or if there's an error fetching users
+      if (usersRes.error || dbUsers.length === 0) {
+        set({ 
+          users: [DEFAULT_ADMIN],
+          dbStatus: dbUsers.length === 0 ? 'empty' : 'error'
+        });
+      } else {
+        set({ users: dbUsers, dbStatus: 'connected' });
+      }
 
       set({
         items: (itemsRes.data as Item[]) || [],
         locations: (locsRes.data as Location[]) || [],
-        users: finalUsers,
         branding: brandingRes.data?.value || DEFAULT_BRANDING,
         isLoading: false
       });
     } catch (error) {
       console.error("Critical Connection Error:", error);
-      set({ isLoading: false });
+      set({ isLoading: false, dbStatus: 'error', users: [DEFAULT_ADMIN] });
     }
   },
 

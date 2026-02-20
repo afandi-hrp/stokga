@@ -1,12 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
-import { useStore } from './store';
+import { useStore, supabase } from './store'; // Import supabase langsung
 import PublicView from './components/PublicView';
 import AdminView from './components/AdminView';
 import { Package, LogOut, AlertCircle, ShieldCheck, User as UserIcon, Loader2, Lock } from 'lucide-react';
 
 const App: React.FC = () => {
-  const { auth, users, login, logout, branding, fetchData, isLoading } = useStore();
+  const { auth, login, logout, branding, fetchData, isLoading } = useStore();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -16,37 +16,58 @@ const App: React.FC = () => {
     fetchData();
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoggingIn(true);
 
-    setTimeout(() => {
-      const cleanUsername = username.trim().toLowerCase();
+    try {
+      const cleanUsername = username.trim();
       const cleanPassword = password.trim();
 
-      const foundUser = users.find(u => 
-        u.username.toLowerCase() === cleanUsername && 
-        u.password === cleanPassword
-      );
+      // LOGIKA LOGIN BARU: Cek langsung ke database Supabase
+      // Ini mengatasi masalah jika array 'users' di local state belum termuat
+      const { data: user, error: dbError } = await supabase
+        .from('users')
+        .select('*')
+        .ilike('username', cleanUsername) // Case-insensitive username check
+        .single();
 
-      if (foundUser) {
-        const { password: _, ...userWithoutPassword } = foundUser;
+      if (dbError || !user) {
+        throw new Error('User tidak ditemukan.');
+      }
+
+      // Verifikasi Password (Plain text sesuai database saat ini)
+      if (user.password === cleanPassword) {
+        // Login Berhasil
+        const { password: _, ...userWithoutPassword } = user;
+        
+        // Update state auth global
         login(userWithoutPassword as any);
+        
+        // Reset form
         setUsername('');
         setPassword('');
+        
+        // Refresh data agar dashboard terupdate
+        await fetchData();
       } else {
-        setError('Kredensial tidak valid. Silakan periksa kembali.');
+        throw new Error('Password salah.');
       }
+    } catch (err: any) {
+      console.error("Login Error:", err);
+      setError('Kredensial tidak valid. Silakan periksa username atau password.');
+    } finally {
       setIsLoggingIn(false);
-    }, 500);
+    }
   };
 
-  if (isLoading && users.length === 0 && !auth.user) {
+  // Tampilkan loader hanya jika auth loading
+  if (isLoading && !auth.user) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
         <Loader2 size={48} className="text-indigo-600 animate-spin mb-4" />
-        <p className="text-slate-500 font-medium tracking-wide">Mempersiapkan Database Lokal...</p>
+        <p className="text-slate-500 font-medium tracking-wide">Menghubungkan ke Server...</p>
       </div>
     );
   }
@@ -82,15 +103,15 @@ const App: React.FC = () => {
             <div className="relative z-10 space-y-6">
               <div className="flex items-center space-x-4">
                 <div className="w-1.5 h-1.5 bg-white/50 rounded-full"></div>
-                <p className="text-sm font-medium text-white/70">Mode Database Lokal</p>
+                <p className="text-sm font-medium text-white/70">Mode Database Cloud</p>
               </div>
               <div className="flex items-center space-x-4">
                 <div className="w-1.5 h-1.5 bg-white/50 rounded-full"></div>
-                <p className="text-sm font-medium text-white/70">Akses Offline Cepat</p>
+                <p className="text-sm font-medium text-white/70">Sinkronisasi Real-time</p>
               </div>
               <div className="flex items-center space-x-4">
                 <div className="w-1.5 h-1.5 bg-white/50 rounded-full"></div>
-                <p className="text-sm font-medium text-white/70">Privasi Data Terjamin</p>
+                <p className="text-sm font-medium text-white/70">Akses Terpusat</p>
               </div>
             </div>
           </div>
@@ -169,7 +190,7 @@ const App: React.FC = () => {
                 <span>{branding.copyrightText || '© 2026 Enterprise Resource'}</span>
                 <span className="flex items-center">
                   <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-                  System Local
+                  System Online
                 </span>
               </div>
             </div>
@@ -227,7 +248,7 @@ const App: React.FC = () => {
       <footer className="bg-white border-t py-8">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <p className="text-slate-400 text-sm font-medium">
-            &copy; {new Date().getFullYear()} {branding.title}. {branding.footerText || 'Local Warehouse v2.0'}
+            &copy; {new Date().getFullYear()} {branding.title}. {branding.footerText || 'Cloud Warehouse v3.0'}
           </p>
         </div>
       </footer>

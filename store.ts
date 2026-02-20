@@ -3,11 +3,19 @@ import { create } from 'zustand';
 import { createClient } from '@supabase/supabase-js';
 import { Item, Location, User, AuthState } from './types';
 
+// CONFIGURATION
 const SUPABASE_URL = 'https://supabase.waruna-group.co.id';
-// Update Key sesuai permintaan
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlbGYtaG9zdGVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDgzNDU2MDAsImV4cCI6MjAyMzkxMDQwMH0.XvR6vS_tXwN6pY8vR2pX9zW4mN7qQ5bL1tS6vH3aK9I';
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+// Default key (Fallback only). 
+// Kunci ini hanya bekerja jika server menggunakan secret default 'super-secret-jwt-token-with-at-least-32-characters-long'
+const DEFAULT_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzcxNTQ5MTI2LCJleHAiOjIwODY5MDkxMjZ9.kHX0SEfhFaJFHOQjT0ZCVxw75zfALLZ312vj4WY9n1Y';
+
+// 1. Coba ambil key yang benar dari LocalStorage (jika user sudah pernah input manual)
+const STORED_KEY = localStorage.getItem('WARUNA_SUPABASE_KEY');
+const ACTIVE_KEY = STORED_KEY || DEFAULT_ANON_KEY;
+
+// 2. Initialize Client
+export const supabase = createClient(SUPABASE_URL, ACTIVE_KEY, {
   auth: {
     persistSession: false,
     autoRefreshToken: false,
@@ -32,6 +40,7 @@ interface WarehouseStore {
   branding: Branding;
   isLoading: boolean;
   schemaError: boolean;
+  connectionError: boolean; // Flag baru untuk mendeteksi kunci salah
   
   fetchData: () => Promise<void>;
   login: (user: User) => void;
@@ -46,6 +55,7 @@ interface WarehouseStore {
   deleteUser: (id: string) => Promise<void>;
   changePassword: (username: string, newPass: string) => Promise<void>;
   updateBranding: (branding: Partial<Branding>) => Promise<void>;
+  setApiKey: (newKey: string) => void; // Fungsi baru untuk update key
 }
 
 const DEFAULT_BRANDING = { 
@@ -65,9 +75,15 @@ export const useStore = create<WarehouseStore>((set, get) => ({
   branding: DEFAULT_BRANDING,
   isLoading: false,
   schemaError: false,
+  connectionError: false,
+
+  setApiKey: (newKey: string) => {
+    localStorage.setItem('WARUNA_SUPABASE_KEY', newKey.trim());
+    window.location.reload(); // Reload halaman agar Client ter-inisialisasi ulang dengan key baru
+  },
 
   fetchData: async () => {
-    set({ isLoading: true, schemaError: false });
+    set({ isLoading: true, schemaError: false, connectionError: false });
     try {
       const [itemsRes, locsRes, usersRes, brandingRes] = await Promise.all([
         supabase.from('barang').select('*').order('sku', { ascending: true }),
@@ -75,6 +91,16 @@ export const useStore = create<WarehouseStore>((set, get) => ({
         supabase.from('users').select('*').order('username'),
         supabase.from('settings').select('*').eq('id', 'branding').maybeSingle()
       ]);
+
+      // DETEKSI ERROR KUNCI SALAH
+      const allErrors = [itemsRes.error, locsRes.error, usersRes.error].filter(Boolean);
+      const isKeyError = allErrors.some(e => e?.message.includes('suitable key') || e?.message.includes('wrong key type') || e?.code === 'PGRST301');
+
+      if (isKeyError) {
+        console.error("FATAL: API Key Rejected by Server");
+        set({ connectionError: true, isLoading: false });
+        return;
+      }
 
       if (itemsRes.error || locsRes.error || usersRes.error) {
         console.error("Fetch Data Errors:", { items: itemsRes.error, locs: locsRes.error, users: usersRes.error });
@@ -95,9 +121,10 @@ export const useStore = create<WarehouseStore>((set, get) => ({
         branding: brandingRes.data?.value || DEFAULT_BRANDING,
         isLoading: false
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Critical Connection Error:", error);
-      set({ isLoading: false });
+      // Tangkap error network level
+      set({ isLoading: false, connectionError: true });
     }
   },
 
@@ -149,6 +176,13 @@ export const useStore = create<WarehouseStore>((set, get) => ({
     if (error) {
       console.error("Standard Insert Failed:", error);
       
+      // Check Auth Error specifically
+      if (error.message.includes('suitable key') || error.message.includes('wrong key type')) {
+        alert("KUNCI API DITOLAK: Anon Key yang digunakan salah. \n\nSilakan refresh halaman dan masukkan Anon Key yang benar dari Server Anda.");
+        set({ connectionError: true });
+        return;
+      }
+
       // Strategi 2: Coba lewat RPC Function (Jalur Khusus/Bypass)
       console.log("Mencoba metode RPC fallback...");
       
@@ -160,7 +194,7 @@ export const useStore = create<WarehouseStore>((set, get) => ({
 
       if (rpcError) {
         console.error("RPC Failed:", rpcError);
-        alert(`Gagal tambah user. \nError: ${error.message}\n(Kemungkinan JWT Secret di server berbeda dengan Key yang digunakan)`);
+        alert(`Gagal tambah user.\nError: ${error.message}\nRPC: ${rpcError.message}`);
       } else {
         await get().fetchData(); // Berhasil lewat RPC
       }

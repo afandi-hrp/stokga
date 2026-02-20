@@ -1,9 +1,51 @@
 
-# 🚀 Solusi Final: Bypass Izin dengan Stored Procedure (RPC)
+# 🚀 Panduan Perbaikan: "No suitable key or wrong key type"
 
-Jika Insert biasa masih gagal dengan "No suitable key" atau "Permission denied", jalankan SQL ini. Ini membuat sebuah fungsi "jalur khusus" (RPC) yang berjalan dengan hak akses admin (`SECURITY DEFINER`), sehingga tidak terpengaruh oleh pembatasan role `anon`.
+Error ini muncul 100% karena **ANON KEY** yang Anda masukkan di frontend **TIDAK COCOK** dengan **JWT SECRET** yang ada di server.
 
-### 🛠️ Jalankan Skrip Ini di SQL Editor Supabase:
+Aplikasi telah diperbarui dengan fitur **Dynamic Key Input**. Jika error terjadi, layar merah akan muncul meminta Anda memasukkan key yang benar.
+
+## Cara Mendapatkan ANON KEY yang Benar dari Server Anda
+
+Anda harus masuk ke server (VPS/Docker) tempat Supabase dijalankan.
+
+### Cara 1: Cek File .env (Paling Mudah)
+Biasanya file konfigurasi ada di folder `docker`.
+```bash
+# Masuk ke folder docker supabase Anda
+cd supabase/docker
+
+# Lihat isi file .env
+cat .env | grep ANON_KEY
+```
+Salin string panjang yang dimulai dengan `eyJh...` dan masukkan ke aplikasi.
+
+### Cara 2: Cek API Gateway (Kong)
+Jika tidak ada di .env, cek file konfigurasi Kong.
+```bash
+cat volumes/api/kong.yml | grep anon
+```
+
+### Cara 3: Generate Ulang Key (Jika Anda tahu JWT_SECRET)
+Jika Anda tahu `JWT_SECRET` server Anda, Anda bisa membuat key baru sendiri.
+1. Buka [jwt.io](https://jwt.io)
+2. Masukkan Payload:
+   ```json
+   {
+     "role": "anon",
+     "iss": "supabase",
+     "iat": 1700000000,
+     "exp": 2000000000
+   }
+   ```
+3. Masukkan `JWT_SECRET` server Anda di bagian "Verify Signature".
+4. Copy token yang dihasilkan di sebelah kiri.
+
+---
+
+## Solusi SQL Sebelumnya (Tetap Diperlukan)
+
+Pastikan Anda juga sudah menjalankan skrip ini untuk masalah izin role `anon` (Error: Permission Denied).
 
 ```sql
 -- 1. Buat Fungsi untuk Menambah User (Bypass RLS/Permission Check)
@@ -14,7 +56,7 @@ CREATE OR REPLACE FUNCTION create_user_safe(
 )
 RETURNS json
 LANGUAGE plpgsql
-SECURITY DEFINER -- KUNCI UTAMA: Fungsi ini berjalan sebagai Super Admin
+SECURITY DEFINER
 AS $$
 BEGIN
     INSERT INTO public.users (username, password, role)
@@ -26,14 +68,8 @@ EXCEPTION WHEN unique_violation THEN
 END;
 $$;
 
--- 2. Berikan Izin Eksekusi Fungsi ini ke Role Anon
 GRANT EXECUTE ON FUNCTION create_user_safe TO anon;
 GRANT EXECUTE ON FUNCTION create_user_safe TO authenticated;
 GRANT EXECUTE ON FUNCTION create_user_safe TO service_role;
-
--- 3. Pastikan Schema Cache di-refresh
 NOTIFY pgrst, 'reload schema';
 ```
-
-### Mengapa ini bekerja?
-Metode `SECURITY DEFINER` membuat fungsi tersebut berjalan dengan hak akses pembuat fungsi (Database Owner), bukan hak akses user yang memanggilnya (`anon`). Aplikasi akan otomatis mencoba metode ini jika insert biasa gagal.

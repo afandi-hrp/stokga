@@ -3,14 +3,17 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from './store';
 import PublicView from './components/PublicView';
 import AdminView from './components/AdminView';
-import { Package, LogIn, LogOut, AlertCircle, ShieldCheck, User as UserIcon, Loader2, Lock } from 'lucide-react';
+import { Package, LogIn, LogOut, AlertCircle, ShieldCheck, User as UserIcon, Loader2, Lock, Key, Server } from 'lucide-react';
 
 const App: React.FC = () => {
-  const { auth, users, login, logout, branding, fetchData, isLoading } = useStore();
+  const { auth, users, login, logout, branding, fetchData, isLoading, connectionError, setApiKey } = useStore();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  
+  // State untuk input Manual Key
+  const [manualKey, setManualKey] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -41,6 +44,61 @@ const App: React.FC = () => {
       setIsLoggingIn(false);
     }, 500);
   };
+
+  const handleUpdateKey = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (manualKey.length < 20) {
+      alert("Key terlalu pendek, pastikan Anda menyalin seluruh string JWT.");
+      return;
+    }
+    setApiKey(manualKey);
+  };
+
+  // --- LAYAR CONFIG KEY DARURAT ---
+  if (connectionError) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-white">
+        <div className="max-w-md w-full bg-slate-800 p-8 rounded-3xl shadow-2xl border border-slate-700 animate-in zoom-in duration-300">
+          <div className="w-16 h-16 bg-rose-500/20 text-rose-500 rounded-2xl flex items-center justify-center mb-6 mx-auto">
+            <Key size={32} />
+          </div>
+          <h2 className="text-2xl font-bold text-center mb-2">Koneksi Database Ditolak</h2>
+          <p className="text-slate-400 text-center text-sm mb-6">
+            Server Supabase menolak kunci API yang digunakan ("No suitable key"). Ini terjadi karena kunci di aplikasi tidak cocok dengan secret di server.
+          </p>
+
+          <form onSubmit={handleUpdateKey} className="space-y-4">
+            <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700">
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
+                Masukkan ANON_KEY Baru
+              </label>
+              <textarea 
+                value={manualKey}
+                onChange={(e) => setManualKey(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-xs font-mono text-green-400 focus:ring-2 focus:ring-green-500 outline-none h-32 resize-none"
+                placeholder="eyJh..."
+                required
+              />
+            </div>
+
+            <button 
+              type="submit" 
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition flex items-center justify-center space-x-2"
+            >
+              <Server size={18} />
+              <span>Simpan & Koneksikan Ulang</span>
+            </button>
+          </form>
+
+          <div className="mt-6 pt-6 border-t border-slate-700">
+            <p className="text-xs text-slate-500 text-center">
+              Tips: Cek file <code className="text-slate-300 bg-slate-700 px-1 rounded">.env</code> di server Supabase Anda untuk menemukan <code>ANON_KEY</code> yang benar.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading && users.length === 0 && !auth.user) {
     return (
